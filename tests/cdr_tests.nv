@@ -1,0 +1,321 @@
+// cdr_tests.nv — the writer and the reader, one rule at a time.
+//
+// The expected bytes are derived from the XCDR version 1 rules and the
+// derivation is written above each test.  `vectors_tests.nv` holds the
+// whole-message vectors; this file holds the primitives, the alignment
+// arithmetic, both byte orders, and every way a call can fail.
+//
+// A reminder of the rules: a primitive of size N is written at a payload
+// offset that is a multiple of N, the payload starting after the four
+// header bytes, and the gap is zero bytes.
+
+use std.bytes
+use std.test
+use cdr
+use cdrbytes
+
+fn hex_of(w: cdr.Writer) -> Str
+    bytes.to_hex(cdrbytes.to_bytes(w))
+
+fn reader_of_hex(h: Str) -> cdr.Reader
+    cdrbytes.reader_from_bytes(bytes.from_hex(h) ?? bytes.zeros(0))
+
+fn status_of(r: cdr.Reader) -> Str
+    cdr.status_name(r.result())
+
+// The header: two bytes of representation identifier, big-endian, and
+// two bytes of options that this module writes as zero.
+@test
+fn test_headers() [io]
+    test.assert_eq_str(hex_of(cdr.writer_le()), "00010000")
+    test.assert_eq_str(hex_of(cdr.writer_be()), "00000000")
+    test.assert_eq(cdr.writer_le().len(), cdr.HEADER_LEN)
+    test.assert_eq_str(status_of(reader_of_hex("00010000")), "success")
+    test.assert_eq_str(status_of(reader_of_hex("00000000")), "success")
+    // The option bytes are not read.
+    test.assert_eq_str(status_of(reader_of_hex("0001abcd")), "success")
+
+// A buffer that is not a CDR message is named for what is wrong with it.
+@test
+fn test_bad_headers() [io]
+    test.assert_eq_str(status_of(reader_of_hex("")), "truncated")
+    test.assert_eq_str(status_of(reader_of_hex("000100")), "truncated")
+    test.assert_eq_str(status_of(reader_of_hex("01010000")), "bad header")
+    // 0x0002 is big-endian parameter-list CDR and 0x0003 little-endian;
+    // this module reads neither.
+    test.assert_eq_str(status_of(reader_of_hex("00020000")), "bad header")
+    test.assert_eq_str(status_of(reader_of_hex("00030000")), "bad header")
+    var r = reader_of_hex("00020000" + "01000000")
+    test.assert_eq(r.get_u32() as Int, 0)
+
+// Each integer width, both orders.
+//
+//   u8 0x01                   offset 0
+//   u16 0x0203  aligned to 2  offset 2 (1 pad): 03 02 / 02 03
+//   u32 0x04050607  to 4      offset 4: 07 06 05 04 / 04 05 06 07
+//   u64 0x08090a0b0c0d0e0f    offset 8: 0f .. 08 / 08 .. 0f
+//
+// 16 payload bytes.
+@test
+fn test_integers_both_orders() [io]
+    var le = cdr.writer_le()
+    le.put_u8(1 as u8)
+    le.put_u16(0x0203 as u16)
+    le.put_u32(0x04050607 as u32)
+    le.put_u64(0x08090a0b0c0d0e0f)
+    test.assert_eq_str(hex_of(le), "00010000" + "01" + "00" + "0302" + "07060504" + "0f0e0d0c0b0a0908")
+    var be = cdr.writer_be()
+    be.put_u8(1 as u8)
+    be.put_u16(0x0203 as u16)
+    be.put_u32(0x04050607 as u32)
+    be.put_u64(0x08090a0b0c0d0e0f)
+    test.assert_eq_str(hex_of(be), "00000000" + "01" + "00" + "0203" + "04050607" + "08090a0b0c0d0e0f")
+    for h in [hex_of(le), hex_of(be)]
+        var r = reader_of_hex(h)
+        test.assert_eq(r.get_u8() as Int, 1)
+        test.assert_eq(r.get_u16() as Int, 0x0203)
+        test.assert_eq(r.get_u32() as Int, 0x04050607)
+        test.assert_eq(r.get_u64(), 0x08090a0b0c0d0e0f)
+        test.assert_eq_str(status_of(r), "success")
+        test.assert_eq(r.remaining(), 0)
+
+// Signed values are the two's-complement bytes of the same width.
+//
+//   i8 -2        fe
+//   i16 -2       offset 2: fe ff
+//   i32 -2       offset 4: fe ff ff ff
+//   i64 -2       offset 8: fe ff ff ff ff ff ff ff
+//   u64 2^64-1   offset 16: ff x 8, which an Int holds as -1
+@test
+fn test_signed_values() [io]
+    var w = cdr.writer_le()
+    w.put_i8(-2 as i8)
+    w.put_i16(-2 as i16)
+    w.put_i32(-2 as i32)
+    w.put_i64(-2)
+    w.put_u64(-1)
+    test.assert_eq_str(hex_of(w), "00010000" + "fe" + "00" + "feff" + "feffffff" + "feffffffffffffff"
+                                 + "ffffffffffffffff")
+    var r = cdr.reader_from(w.buf)
+    test.assert_eq(r.get_i8() as Int, -2)
+    test.assert_eq(r.get_i16() as Int, -2)
+    test.assert_eq(r.get_i32() as Int, -2)
+    test.assert_eq(r.get_i64(), -2)
+    test.assert_eq(r.get_u64(), -1)
+
+// Padding is skipped on read without being looked at.
+//
+//   u8 at 0, then a u32 at 4: three padding bytes, here 11 22 33.
+@test
+fn test_padding_is_not_checked() [io]
+    var r = reader_of_hex("00010000" + "05" + "112233" + "78563412")
+    test.assert_eq(r.get_u8() as Int, 5)
+    test.assert_eq(r.get_u32() as Int, 0x12345678)
+    test.assert_eq_str(status_of(r), "success")
+
+// bool: one byte, 0 or 1; any other byte is refused.
+@test
+fn test_bool() [io]
+    var w = cdr.writer_le()
+    w.put_bool(true)
+    w.put_bool(false)
+    test.assert_eq_str(hex_of(w), "00010000" + "0100")
+    test.assert(w.ok())
+    var r = cdr.reader_from(w.buf)
+    test.assert(r.get_bool())
+    test.assert(not r.get_bool())
+    test.assert(r.ok())
+    var bad = reader_of_hex("00010000" + "02")
+    test.assert(not bad.get_bool())
+    test.assert_eq_str(status_of(bad), "bad value")
+    test.assert(not bad.ok())
+
+// float32 patterns.  The expected words are IEEE 754 binary32:
+//
+//   1.0      3f800000     -2.5     c0200000     0.1   3dcccccd (rounded)
+//   -0.0     80000000     inf      7f800000     -inf  ff800000
+//   max      7f7fffff     1e-45    00000001 (the smallest subnormal)
+//   2^-130   00080000 (a subnormal: the value is the mantissa times 2^-149, and
+//            2^-130 is 2^19 of them, which is 0x80000)
+//   NaN      a NaN stays a NaN, with the sign and the top payload kept
+@test
+fn test_float32_patterns() [io]
+    let cases = [
+        (1.0, "0000803f"),
+        (-2.5, "000020c0"),
+        (0.1, "cdcccc3d"),
+        (-0.0, "00000080"),
+        (3.4028234663852886e38, "ffff7f7f"),
+        (1.401298464324817e-45, "01000000"),
+        (7.346839692639297e-40, "00000800")]
+    for c in cases
+        var w = cdr.writer_le()
+        w.put_f32(c.0 as fp32)
+        test.assert_eq_str(hex_of(w), "00010000" + c.1)
+        var r = cdr.reader_from(w.buf)
+        let back: fp32 = r.get_f32()
+        test.assert(back == (c.0 as fp32) or c.0 == 0.0)
+    // Infinity, from a value too large for binary32 and from itself.
+    var inf = cdr.writer_le()
+    inf.put_f32(1.0e39 as fp32)
+    inf.put_f32(-1.0e39 as fp32)
+    test.assert_eq_str(hex_of(inf), "00010000" + "0000807f" + "000080ff")
+    var rinf = cdr.reader_from(inf.buf)
+    test.assert((rinf.get_f32() as Float) > 3.0e38)
+    test.assert((rinf.get_f32() as Float) < -3.0e38)
+    // NaN and the signed zero come back as what they were.
+    var rnan = reader_of_hex("00010000" + "0000c07f" + "00000080")
+    let nan: fp32 = rnan.get_f32()
+    test.assert(nan != nan)
+    let nz: fp32 = rnan.get_f32()
+    test.assert((1.0 / nz as Float) < 0.0)
+    var wnan = cdr.writer_le()
+    wnan.put_f32(nan)
+    test.assert_eq_str(hex_of(wnan), "00010000" + "0000c07f")
+    // A subnormal comes back as itself, and the signed ones too.
+    var rsub = reader_of_hex("00010000" + "01000000" + "00002080")
+    test.assert_approx(rsub.get_f32() as Float, 1.401298464324817e-45, 1.0e-50)
+    test.assert((rsub.get_f32() as Float) < 0.0)
+
+// float64 is the 64-bit pattern, 8-aligned.  1.5 is 3ff8000000000000.
+//
+//   u8 at 0, pad 7, then the double at 8.
+@test
+fn test_float64_alignment() [io]
+    var w = cdr.writer_le()
+    w.put_u8(9 as u8)
+    w.put_f64(1.5)
+    test.assert_eq_str(hex_of(w), "00010000" + "09" + "00000000000000" + "000000000000f83f")
+    var be = cdr.writer_be()
+    be.put_f64(1.5)
+    test.assert_eq_str(hex_of(be), "00000000" + "3ff8000000000000")
+    var r = cdr.reader_from(w.buf)
+    test.assert_eq(r.get_u8() as Int, 9)
+    test.assert_approx(r.get_f64(), 1.5, 0.0)
+
+// A string: a length that counts the NUL, the text, the NUL.  Here "ab",
+// then a u32 to show the padding that follows an odd-sized string.
+//
+//   offset 0   length 3        03 00 00 00
+//   offset 4   a b NUL         61 62 00
+//   offset 7   padding 1       00          (the u32 is 4-aligned)
+//   offset 8   u32 7           07 00 00 00
+@test
+fn test_strings() [io]
+    var w = cdr.writer_le()
+    w.begin_string(2)
+    w.put_u8(0x61 as u8)
+    w.put_u8(0x62 as u8)
+    w.end_string()
+    w.put_u32(7 as u32)
+    test.assert_eq_str(hex_of(w), "00010000" + "03000000" + "616200" + "00" + "07000000")
+    var r = cdr.reader_from(w.buf)
+    let n = r.begin_string(8)
+    test.assert_eq(n, 2)
+    test.assert_eq(r.get_u8() as Int, 0x61)
+    test.assert_eq(r.get_u8() as Int, 0x62)
+    r.end_string()
+    test.assert_eq(r.get_u32() as Int, 7)
+    test.assert_eq_str(status_of(r), "success")
+    // The empty string is a length of 1 and a NUL.
+    var e = cdr.writer_le()
+    e.begin_string(0)
+    e.end_string()
+    test.assert_eq_str(hex_of(e), "00010000" + "01000000" + "00")
+
+// The three ways a string can be wrong on the wire.
+@test
+fn test_string_faults() [io]
+    // A length of zero: a string always has its NUL.
+    var zero = reader_of_hex("00010000" + "00000000")
+    test.assert_eq(zero.begin_string(8), 0)
+    test.assert_eq_str(status_of(zero), "bad string")
+    // Longer than the place that receives it.
+    var long = reader_of_hex("00010000" + "0a000000" + "00000000000000000000")
+    test.assert_eq(long.begin_string(4), 0)
+    test.assert_eq_str(status_of(long), "too long")
+    // Not ended by a NUL.
+    var open = reader_of_hex("00010000" + "02000000" + "6161")
+    test.assert_eq(open.begin_string(8), 1)
+    let _ = open.get_u8()
+    open.end_string()
+    test.assert_eq_str(status_of(open), "bad string")
+
+// A count is checked against the capacity of what receives it.
+@test
+fn test_counts() [io]
+    var w = cdr.writer_le()
+    w.put_count(3)
+    var r = cdr.reader_from(w.buf)
+    test.assert_eq(r.get_count(3), 3)
+    var r2 = cdr.reader_from(w.buf)
+    test.assert_eq(r2.get_count(2), 0)
+    test.assert_eq_str(status_of(r2), "too long")
+    // The first failure is the one kept, whatever fails next.
+    let _ = r2.get_u8()
+    test.assert_eq_str(status_of(r2), "too long")
+    test.assert_eq(r2.begin_string(8), 0)
+    test.assert_eq_str(status_of(r2), "too long")
+
+// Reading past the end is `Truncated`, answers zero, and keeps answering
+// zero without moving.
+@test
+fn test_reader_truncated() [io]
+    var r = reader_of_hex("00010000" + "0102")
+    test.assert_eq(r.get_u8() as Int, 1)
+    test.assert_eq(r.get_u16() as Int, 0)
+    test.assert_eq_str(status_of(r), "truncated")
+    test.assert_eq(r.get_u8() as Int, 0)
+    test.assert_eq(r.get_u64(), 0)
+    r.align(8)
+    test.assert_eq_str(status_of(r), "truncated")
+
+// A writer that runs out of room says so, once, and then writes nothing.
+@test
+fn test_writer_full() [io]
+    var w = cdr.writer_le()
+    for _ in 0..cdr.CDR_CAP - cdr.HEADER_LEN
+        w.put_u8(7 as u8)
+    test.assert_eq(w.len(), cdr.CDR_CAP)
+    test.assert_eq_str(cdr.status_name(w.result()), "success")
+    w.put_u8(1 as u8)
+    test.assert_eq_str(cdr.status_name(w.result()), "full")
+    test.assert_eq(w.len(), cdr.CDR_CAP)
+    w.put_f64(1.0)
+    w.align(8)
+    test.assert_eq(w.len(), cdr.CDR_CAP)
+    test.assert(not w.ok())
+    // A pad that does not fit is also Full.
+    var p = cdr.writer_le()
+    for _ in 0..cdr.CDR_CAP - cdr.HEADER_LEN - 1
+        p.put_u8(7 as u8)
+    p.put_u32(1 as u32)
+    test.assert_eq_str(cdr.status_name(p.result()), "full")
+
+// `cdrbytes`: the writer's bytes, and a reader over bytes, including a
+// message too long for the buffer.
+@test
+fn test_cdrbytes() [io]
+    var w = cdr.writer_le()
+    w.put_u16(258 as u16)
+    test.assert_eq_str(bytes.to_hex(cdrbytes.to_bytes(w)), "000100000201")
+    var r = cdrbytes.reader_from_bytes(bytes.from_hex("000100000201") ?? bytes.zeros(0))
+    test.assert_eq(r.get_u16() as Int, 258)
+    let exact = bytes.zeros(cdr.CDR_CAP)
+    test.assert_eq_str(cdr.status_name(cdrbytes.reader_from_bytes(exact).result()), "success")
+    let over = bytes.zeros(cdr.CDR_CAP + 1)
+    var big = cdrbytes.reader_from_bytes(over)
+    test.assert_eq_str(cdr.status_name(big.result()), "too long")
+    test.assert_eq(big.get_u8() as Int, 0)
+
+// Every status has a name, and the `Error` implementation says it.
+@test
+fn test_status_names() [io]
+    test.assert_eq_str(cdr.status_name(cdr.Status.Success), "success")
+    test.assert_eq_str(cdr.status_name(cdr.Status.Full), "full")
+    test.assert_eq_str(cdr.status_name(cdr.Status.Truncated), "truncated")
+    test.assert_eq_str(cdr.status_name(cdr.Status.TooLong), "too long")
+    test.assert_eq_str(cdr.status_name(cdr.Status.BadString), "bad string")
+    test.assert_eq_str(cdr.status_name(cdr.Status.BadHeader), "bad header")
+    test.assert_eq_str(cdr.status_name(cdr.Status.BadValue), "bad value")
+    test.assert_eq_str(cdr.Status.Full.message(), "full")

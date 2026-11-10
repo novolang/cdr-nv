@@ -11,7 +11,7 @@ use std.bytes
 use std.test
 use cdr
 use cdrbytes
-use interfaces.std_msgs
+use std_msgs
 
 fn writer(le: Bool) -> cdr.Writer
     if le
@@ -29,8 +29,10 @@ fn reader_of(w: cdr.Writer, cut: Int) -> cdr.Reader
 @test
 fn test_std_msgs_Bool() [io]
     let m = std_msgs.BoolMsg.sample()
-    test.assert_eq_str(std_msgs.BoolMsg.type_name(), "std_msgs/msg/Bool")
-    test.assert_eq_str(std_msgs.BoolMsg.dds_type_name(), "std_msgs::msg::dds_::Bool_")
+    let tn = std_msgs.BoolMsg.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Bool")
+    let dn = std_msgs.BoolMsg.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Bool_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -47,7 +49,7 @@ fn test_std_msgs_Bool() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.BoolMsg.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -56,8 +58,10 @@ fn test_std_msgs_Bool() [io]
 @test
 fn test_std_msgs_Byte() [io]
     let m = std_msgs.Byte.sample()
-    test.assert_eq_str(std_msgs.Byte.type_name(), "std_msgs/msg/Byte")
-    test.assert_eq_str(std_msgs.Byte.dds_type_name(), "std_msgs::msg::dds_::Byte_")
+    let tn = std_msgs.Byte.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Byte")
+    let dn = std_msgs.Byte.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Byte_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -74,7 +78,7 @@ fn test_std_msgs_Byte() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Byte.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -83,8 +87,10 @@ fn test_std_msgs_Byte() [io]
 @test
 fn test_std_msgs_ByteMultiArray() [io]
     let m = std_msgs.ByteMultiArray.sample()
-    test.assert_eq_str(std_msgs.ByteMultiArray.type_name(), "std_msgs/msg/ByteMultiArray")
-    test.assert_eq_str(std_msgs.ByteMultiArray.dds_type_name(), "std_msgs::msg::dds_::ByteMultiArray_")
+    let tn = std_msgs.ByteMultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/ByteMultiArray")
+    let dn = std_msgs.ByteMultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::ByteMultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -101,7 +107,7 @@ fn test_std_msgs_ByteMultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.ByteMultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -110,8 +116,10 @@ fn test_std_msgs_ByteMultiArray() [io]
 @test
 fn test_std_msgs_Char() [io]
     let m = std_msgs.CharMsg.sample()
-    test.assert_eq_str(std_msgs.CharMsg.type_name(), "std_msgs/msg/Char")
-    test.assert_eq_str(std_msgs.CharMsg.dds_type_name(), "std_msgs::msg::dds_::Char_")
+    let tn = std_msgs.CharMsg.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Char")
+    let dn = std_msgs.CharMsg.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Char_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -128,7 +136,7 @@ fn test_std_msgs_Char() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.CharMsg.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -137,8 +145,10 @@ fn test_std_msgs_Char() [io]
 @test
 fn test_std_msgs_ColorRGBA() [io]
     let m = std_msgs.ColorRGBA.sample()
-    test.assert_eq_str(std_msgs.ColorRGBA.type_name(), "std_msgs/msg/ColorRGBA")
-    test.assert_eq_str(std_msgs.ColorRGBA.dds_type_name(), "std_msgs::msg::dds_::ColorRGBA_")
+    let tn = std_msgs.ColorRGBA.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/ColorRGBA")
+    let dn = std_msgs.ColorRGBA.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::ColorRGBA_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -155,7 +165,7 @@ fn test_std_msgs_ColorRGBA() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.ColorRGBA.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -164,8 +174,10 @@ fn test_std_msgs_ColorRGBA() [io]
 @test
 fn test_std_msgs_Empty() [io]
     let m = std_msgs.Empty.sample()
-    test.assert_eq_str(std_msgs.Empty.type_name(), "std_msgs/msg/Empty")
-    test.assert_eq_str(std_msgs.Empty.dds_type_name(), "std_msgs::msg::dds_::Empty_")
+    let tn = std_msgs.Empty.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Empty")
+    let dn = std_msgs.Empty.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Empty_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -182,7 +194,7 @@ fn test_std_msgs_Empty() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Empty.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -191,8 +203,10 @@ fn test_std_msgs_Empty() [io]
 @test
 fn test_std_msgs_Float32() [io]
     let m = std_msgs.Float32.sample()
-    test.assert_eq_str(std_msgs.Float32.type_name(), "std_msgs/msg/Float32")
-    test.assert_eq_str(std_msgs.Float32.dds_type_name(), "std_msgs::msg::dds_::Float32_")
+    let tn = std_msgs.Float32.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Float32")
+    let dn = std_msgs.Float32.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Float32_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -209,7 +223,7 @@ fn test_std_msgs_Float32() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Float32.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -218,8 +232,10 @@ fn test_std_msgs_Float32() [io]
 @test
 fn test_std_msgs_Float32MultiArray() [io]
     let m = std_msgs.Float32MultiArray.sample()
-    test.assert_eq_str(std_msgs.Float32MultiArray.type_name(), "std_msgs/msg/Float32MultiArray")
-    test.assert_eq_str(std_msgs.Float32MultiArray.dds_type_name(), "std_msgs::msg::dds_::Float32MultiArray_")
+    let tn = std_msgs.Float32MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Float32MultiArray")
+    let dn = std_msgs.Float32MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Float32MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -236,7 +252,7 @@ fn test_std_msgs_Float32MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Float32MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -245,8 +261,10 @@ fn test_std_msgs_Float32MultiArray() [io]
 @test
 fn test_std_msgs_Float64() [io]
     let m = std_msgs.Float64.sample()
-    test.assert_eq_str(std_msgs.Float64.type_name(), "std_msgs/msg/Float64")
-    test.assert_eq_str(std_msgs.Float64.dds_type_name(), "std_msgs::msg::dds_::Float64_")
+    let tn = std_msgs.Float64.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Float64")
+    let dn = std_msgs.Float64.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Float64_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -263,7 +281,7 @@ fn test_std_msgs_Float64() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Float64.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -272,8 +290,10 @@ fn test_std_msgs_Float64() [io]
 @test
 fn test_std_msgs_Float64MultiArray() [io]
     let m = std_msgs.Float64MultiArray.sample()
-    test.assert_eq_str(std_msgs.Float64MultiArray.type_name(), "std_msgs/msg/Float64MultiArray")
-    test.assert_eq_str(std_msgs.Float64MultiArray.dds_type_name(), "std_msgs::msg::dds_::Float64MultiArray_")
+    let tn = std_msgs.Float64MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Float64MultiArray")
+    let dn = std_msgs.Float64MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Float64MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -290,7 +310,7 @@ fn test_std_msgs_Float64MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Float64MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -299,8 +319,10 @@ fn test_std_msgs_Float64MultiArray() [io]
 @test
 fn test_std_msgs_Header() [io]
     let m = std_msgs.Header.sample()
-    test.assert_eq_str(std_msgs.Header.type_name(), "std_msgs/msg/Header")
-    test.assert_eq_str(std_msgs.Header.dds_type_name(), "std_msgs::msg::dds_::Header_")
+    let tn = std_msgs.Header.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Header")
+    let dn = std_msgs.Header.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Header_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -317,7 +339,7 @@ fn test_std_msgs_Header() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Header.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -326,8 +348,10 @@ fn test_std_msgs_Header() [io]
 @test
 fn test_std_msgs_Int16() [io]
     let m = std_msgs.Int16.sample()
-    test.assert_eq_str(std_msgs.Int16.type_name(), "std_msgs/msg/Int16")
-    test.assert_eq_str(std_msgs.Int16.dds_type_name(), "std_msgs::msg::dds_::Int16_")
+    let tn = std_msgs.Int16.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Int16")
+    let dn = std_msgs.Int16.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Int16_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -344,7 +368,7 @@ fn test_std_msgs_Int16() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Int16.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -353,8 +377,10 @@ fn test_std_msgs_Int16() [io]
 @test
 fn test_std_msgs_Int16MultiArray() [io]
     let m = std_msgs.Int16MultiArray.sample()
-    test.assert_eq_str(std_msgs.Int16MultiArray.type_name(), "std_msgs/msg/Int16MultiArray")
-    test.assert_eq_str(std_msgs.Int16MultiArray.dds_type_name(), "std_msgs::msg::dds_::Int16MultiArray_")
+    let tn = std_msgs.Int16MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Int16MultiArray")
+    let dn = std_msgs.Int16MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Int16MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -371,7 +397,7 @@ fn test_std_msgs_Int16MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Int16MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -380,8 +406,10 @@ fn test_std_msgs_Int16MultiArray() [io]
 @test
 fn test_std_msgs_Int32() [io]
     let m = std_msgs.Int32.sample()
-    test.assert_eq_str(std_msgs.Int32.type_name(), "std_msgs/msg/Int32")
-    test.assert_eq_str(std_msgs.Int32.dds_type_name(), "std_msgs::msg::dds_::Int32_")
+    let tn = std_msgs.Int32.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Int32")
+    let dn = std_msgs.Int32.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Int32_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -398,7 +426,7 @@ fn test_std_msgs_Int32() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Int32.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -407,8 +435,10 @@ fn test_std_msgs_Int32() [io]
 @test
 fn test_std_msgs_Int32MultiArray() [io]
     let m = std_msgs.Int32MultiArray.sample()
-    test.assert_eq_str(std_msgs.Int32MultiArray.type_name(), "std_msgs/msg/Int32MultiArray")
-    test.assert_eq_str(std_msgs.Int32MultiArray.dds_type_name(), "std_msgs::msg::dds_::Int32MultiArray_")
+    let tn = std_msgs.Int32MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Int32MultiArray")
+    let dn = std_msgs.Int32MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Int32MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -425,7 +455,7 @@ fn test_std_msgs_Int32MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Int32MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -434,8 +464,10 @@ fn test_std_msgs_Int32MultiArray() [io]
 @test
 fn test_std_msgs_Int64() [io]
     let m = std_msgs.Int64.sample()
-    test.assert_eq_str(std_msgs.Int64.type_name(), "std_msgs/msg/Int64")
-    test.assert_eq_str(std_msgs.Int64.dds_type_name(), "std_msgs::msg::dds_::Int64_")
+    let tn = std_msgs.Int64.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Int64")
+    let dn = std_msgs.Int64.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Int64_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -452,7 +484,7 @@ fn test_std_msgs_Int64() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Int64.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -461,8 +493,10 @@ fn test_std_msgs_Int64() [io]
 @test
 fn test_std_msgs_Int64MultiArray() [io]
     let m = std_msgs.Int64MultiArray.sample()
-    test.assert_eq_str(std_msgs.Int64MultiArray.type_name(), "std_msgs/msg/Int64MultiArray")
-    test.assert_eq_str(std_msgs.Int64MultiArray.dds_type_name(), "std_msgs::msg::dds_::Int64MultiArray_")
+    let tn = std_msgs.Int64MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Int64MultiArray")
+    let dn = std_msgs.Int64MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Int64MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -479,7 +513,7 @@ fn test_std_msgs_Int64MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Int64MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -488,8 +522,10 @@ fn test_std_msgs_Int64MultiArray() [io]
 @test
 fn test_std_msgs_Int8() [io]
     let m = std_msgs.Int8.sample()
-    test.assert_eq_str(std_msgs.Int8.type_name(), "std_msgs/msg/Int8")
-    test.assert_eq_str(std_msgs.Int8.dds_type_name(), "std_msgs::msg::dds_::Int8_")
+    let tn = std_msgs.Int8.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Int8")
+    let dn = std_msgs.Int8.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Int8_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -506,7 +542,7 @@ fn test_std_msgs_Int8() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Int8.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -515,8 +551,10 @@ fn test_std_msgs_Int8() [io]
 @test
 fn test_std_msgs_Int8MultiArray() [io]
     let m = std_msgs.Int8MultiArray.sample()
-    test.assert_eq_str(std_msgs.Int8MultiArray.type_name(), "std_msgs/msg/Int8MultiArray")
-    test.assert_eq_str(std_msgs.Int8MultiArray.dds_type_name(), "std_msgs::msg::dds_::Int8MultiArray_")
+    let tn = std_msgs.Int8MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/Int8MultiArray")
+    let dn = std_msgs.Int8MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::Int8MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -533,7 +571,7 @@ fn test_std_msgs_Int8MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.Int8MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -542,8 +580,10 @@ fn test_std_msgs_Int8MultiArray() [io]
 @test
 fn test_std_msgs_MultiArrayDimension() [io]
     let m = std_msgs.MultiArrayDimension.sample()
-    test.assert_eq_str(std_msgs.MultiArrayDimension.type_name(), "std_msgs/msg/MultiArrayDimension")
-    test.assert_eq_str(std_msgs.MultiArrayDimension.dds_type_name(), "std_msgs::msg::dds_::MultiArrayDimension_")
+    let tn = std_msgs.MultiArrayDimension.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/MultiArrayDimension")
+    let dn = std_msgs.MultiArrayDimension.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::MultiArrayDimension_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -560,7 +600,7 @@ fn test_std_msgs_MultiArrayDimension() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.MultiArrayDimension.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -569,8 +609,10 @@ fn test_std_msgs_MultiArrayDimension() [io]
 @test
 fn test_std_msgs_MultiArrayLayout() [io]
     let m = std_msgs.MultiArrayLayout.sample()
-    test.assert_eq_str(std_msgs.MultiArrayLayout.type_name(), "std_msgs/msg/MultiArrayLayout")
-    test.assert_eq_str(std_msgs.MultiArrayLayout.dds_type_name(), "std_msgs::msg::dds_::MultiArrayLayout_")
+    let tn = std_msgs.MultiArrayLayout.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/MultiArrayLayout")
+    let dn = std_msgs.MultiArrayLayout.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::MultiArrayLayout_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -587,7 +629,7 @@ fn test_std_msgs_MultiArrayLayout() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.MultiArrayLayout.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -596,8 +638,10 @@ fn test_std_msgs_MultiArrayLayout() [io]
 @test
 fn test_std_msgs_String() [io]
     let m = std_msgs.StringMsg.sample()
-    test.assert_eq_str(std_msgs.StringMsg.type_name(), "std_msgs/msg/String")
-    test.assert_eq_str(std_msgs.StringMsg.dds_type_name(), "std_msgs::msg::dds_::String_")
+    let tn = std_msgs.StringMsg.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/String")
+    let dn = std_msgs.StringMsg.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::String_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -614,7 +658,7 @@ fn test_std_msgs_String() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.StringMsg.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -623,8 +667,10 @@ fn test_std_msgs_String() [io]
 @test
 fn test_std_msgs_UInt16() [io]
     let m = std_msgs.UInt16.sample()
-    test.assert_eq_str(std_msgs.UInt16.type_name(), "std_msgs/msg/UInt16")
-    test.assert_eq_str(std_msgs.UInt16.dds_type_name(), "std_msgs::msg::dds_::UInt16_")
+    let tn = std_msgs.UInt16.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/UInt16")
+    let dn = std_msgs.UInt16.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt16_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -641,7 +687,7 @@ fn test_std_msgs_UInt16() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.UInt16.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -650,8 +696,10 @@ fn test_std_msgs_UInt16() [io]
 @test
 fn test_std_msgs_UInt16MultiArray() [io]
     let m = std_msgs.UInt16MultiArray.sample()
-    test.assert_eq_str(std_msgs.UInt16MultiArray.type_name(), "std_msgs/msg/UInt16MultiArray")
-    test.assert_eq_str(std_msgs.UInt16MultiArray.dds_type_name(), "std_msgs::msg::dds_::UInt16MultiArray_")
+    let tn = std_msgs.UInt16MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/UInt16MultiArray")
+    let dn = std_msgs.UInt16MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt16MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -668,7 +716,7 @@ fn test_std_msgs_UInt16MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.UInt16MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -677,8 +725,10 @@ fn test_std_msgs_UInt16MultiArray() [io]
 @test
 fn test_std_msgs_UInt32() [io]
     let m = std_msgs.UInt32.sample()
-    test.assert_eq_str(std_msgs.UInt32.type_name(), "std_msgs/msg/UInt32")
-    test.assert_eq_str(std_msgs.UInt32.dds_type_name(), "std_msgs::msg::dds_::UInt32_")
+    let tn = std_msgs.UInt32.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/UInt32")
+    let dn = std_msgs.UInt32.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt32_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -695,7 +745,7 @@ fn test_std_msgs_UInt32() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.UInt32.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -704,8 +754,10 @@ fn test_std_msgs_UInt32() [io]
 @test
 fn test_std_msgs_UInt32MultiArray() [io]
     let m = std_msgs.UInt32MultiArray.sample()
-    test.assert_eq_str(std_msgs.UInt32MultiArray.type_name(), "std_msgs/msg/UInt32MultiArray")
-    test.assert_eq_str(std_msgs.UInt32MultiArray.dds_type_name(), "std_msgs::msg::dds_::UInt32MultiArray_")
+    let tn = std_msgs.UInt32MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/UInt32MultiArray")
+    let dn = std_msgs.UInt32MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt32MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -722,7 +774,7 @@ fn test_std_msgs_UInt32MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.UInt32MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -731,8 +783,10 @@ fn test_std_msgs_UInt32MultiArray() [io]
 @test
 fn test_std_msgs_UInt64() [io]
     let m = std_msgs.UInt64.sample()
-    test.assert_eq_str(std_msgs.UInt64.type_name(), "std_msgs/msg/UInt64")
-    test.assert_eq_str(std_msgs.UInt64.dds_type_name(), "std_msgs::msg::dds_::UInt64_")
+    let tn = std_msgs.UInt64.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/UInt64")
+    let dn = std_msgs.UInt64.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt64_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -749,7 +803,7 @@ fn test_std_msgs_UInt64() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.UInt64.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -758,8 +812,10 @@ fn test_std_msgs_UInt64() [io]
 @test
 fn test_std_msgs_UInt64MultiArray() [io]
     let m = std_msgs.UInt64MultiArray.sample()
-    test.assert_eq_str(std_msgs.UInt64MultiArray.type_name(), "std_msgs/msg/UInt64MultiArray")
-    test.assert_eq_str(std_msgs.UInt64MultiArray.dds_type_name(), "std_msgs::msg::dds_::UInt64MultiArray_")
+    let tn = std_msgs.UInt64MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/UInt64MultiArray")
+    let dn = std_msgs.UInt64MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt64MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -776,7 +832,7 @@ fn test_std_msgs_UInt64MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.UInt64MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -785,8 +841,10 @@ fn test_std_msgs_UInt64MultiArray() [io]
 @test
 fn test_std_msgs_UInt8() [io]
     let m = std_msgs.UInt8.sample()
-    test.assert_eq_str(std_msgs.UInt8.type_name(), "std_msgs/msg/UInt8")
-    test.assert_eq_str(std_msgs.UInt8.dds_type_name(), "std_msgs::msg::dds_::UInt8_")
+    let tn = std_msgs.UInt8.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/UInt8")
+    let dn = std_msgs.UInt8.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt8_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -803,7 +861,7 @@ fn test_std_msgs_UInt8() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.UInt8.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -812,8 +870,10 @@ fn test_std_msgs_UInt8() [io]
 @test
 fn test_std_msgs_UInt8MultiArray() [io]
     let m = std_msgs.UInt8MultiArray.sample()
-    test.assert_eq_str(std_msgs.UInt8MultiArray.type_name(), "std_msgs/msg/UInt8MultiArray")
-    test.assert_eq_str(std_msgs.UInt8MultiArray.dds_type_name(), "std_msgs::msg::dds_::UInt8MultiArray_")
+    let tn = std_msgs.UInt8MultiArray.type_name()
+    test.assert_eq_str(tn, "std_msgs/msg/UInt8MultiArray")
+    let dn = std_msgs.UInt8MultiArray.dds_type_name()
+    test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt8MultiArray_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -830,7 +890,7 @@ fn test_std_msgs_UInt8MultiArray() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_msgs.UInt8MultiArray.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")

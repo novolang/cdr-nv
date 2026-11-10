@@ -46,7 +46,10 @@ pub fn to_bytes(w: Writer) -> Bytes
 pub fn reader_from_bytes(src: Bytes) -> Reader
     var v: Vec[u8; CDR_CAP] = Vec.new()
     let n = bytes.len(src)
-    let keep = if n > CDR_CAP then CDR_CAP else n
+    let keep = if n > CDR_CAP
+        CDR_CAP
+    else
+        n
     for i in 0..keep
         let _ = v.push((bytes.byte_at(src, i) ?? 0) as u8)
     var r = cdr.reader_from(v)

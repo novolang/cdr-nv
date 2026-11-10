@@ -1,0 +1,369 @@
+// msggen_tests.nv — what msggen reads, what it writes, and every way it
+// refuses a definition.
+//
+// The bundled sets in `src/interfaces/` are compared with the generator
+// in `interfaces_current_tests.nv`; this file feeds it single lines.  A
+// refusal is checked by a word of its message, because the message is
+// for a person and the word is what says which rule was applied.
+
+use std.test
+use cdr
+use msggen
+use cdr_test_msgs
+
+// The error of parsing `text` as a message of package `p`, or "ok".
+fn perr(text: Str) -> Str
+    match msggen.parse_msg("p", "M", text)
+        Ok(_)  => "ok"
+        Err(e) => e
+
+fn has(whole: Str, part: Str) -> Bool
+    str.contains(whole, part)
+
+// The error text of a result that is expected to be one.
+fn gerr(r: Result<Str, Str>) -> Str
+    match r
+        Ok(_)  => "ok"
+        Err(e) => e
+
+fn aerr(r: Result<msggen.Job, Str>) -> Str
+    match r
+        Ok(_)  => "ok"
+        Err(e) => e
+
+// The first field of a message, as the parser read it.
+//
+// The refusal arm builds a field by hand instead of unwrapping a second
+// parse with `!`, which is what this arm should say.
+// workaround(match-arm-unwrap-leaks-the-ok-arm-element): the `!` in a
+// match arm that does not run makes the leak check fail after the tests
+// pass; write the arm with `!` again when the filing is fixed.
+fn first_field(text: Str) -> msggen.Field
+    let none = msggen.TypeRef { prim: "", pkg: "", name: "", bound: -1, shape: 0, count: 0 }
+    match msggen.parse_msg("p", "M", text)
+        Ok(m)  => m.fields[0]
+        Err(_) => msggen.Field { ty: none, name: "", has_default: false, defaults: [], doc: [] }
+
+@test
+fn test_primitive_types_and_shapes() [io]
+    let a = first_field("float64 x\n")
+    test.assert_eq_str(a.ty.prim, "float64")
+    test.assert_eq(a.ty.shape, msggen.SHAPE_SCALAR)
+    let b = first_field("uint8[16] x\n")
+    test.assert_eq(b.ty.shape, msggen.SHAPE_FIXED)
+    test.assert_eq(b.ty.count, 16)
+    let c = first_field("int32[<=7] x\n")
+    test.assert_eq(c.ty.shape, msggen.SHAPE_BOUNDED)
+    test.assert_eq(c.ty.count, 7)
+    let d = first_field("string[] x\n")
+    test.assert_eq(d.ty.shape, msggen.SHAPE_UNBOUNDED)
+    let e = first_field("string<=12 x\n")
+    test.assert_eq(e.ty.bound, 12)
+    let f = first_field("string<=4[<=2] x\n")
+    test.assert_eq(f.ty.bound, 4)
+    test.assert_eq(f.ty.count, 2)
+    test.assert_eq(first_field("string x\n").ty.bound, -1)
+
+@test
+fn test_nested_type_spellings() [io]
+    let a = first_field("geometry_msgs/Point x\n")
+    test.assert_eq_str(a.ty.pkg, "geometry_msgs")
+    test.assert_eq_str(a.ty.name, "Point")
+    // A bare name is a message of the same package.
+    let b = first_field("Other x\n")
+    test.assert_eq_str(b.ty.pkg, "p")
+    // `Header` alone is std_msgs/Header, as ROS 2 reads it.
+    let c = first_field("Header header\n")
+    test.assert_eq_str(c.ty.pkg, "std_msgs")
+    // pkg/msg/Name is the same type.
+    let d = first_field("a_pkg/msg/Thing x\n")
+    test.assert_eq_str(d.ty.pkg, "a_pkg")
+    test.assert_eq_str(d.ty.name, "Thing")
+
+@test
+fn test_type_refusals() [io]
+    test.assert(has(perr("wstring x\n"), "wstring"))
+    test.assert(has(perr("int32[3 x\n"), "closing"))
+    test.assert(has(perr("int32[0] x\n"), "positive"))
+    test.assert(has(perr("int32[x] x\n"), "positive"))
+    test.assert(has(perr("int32[<=0] x\n"), "positive"))
+    test.assert(has(perr("int32<=3 x\n"), "only a string"))
+    test.assert(has(perr("string<=0 x\n"), "bound"))
+    test.assert(has(perr("string<=x x\n"), "bound"))
+    test.assert(has(perr("a/b/c/d x\n"), "pkg/Name"))
+    test.assert(has(perr("a/b/c x\n"), "pkg/Name"))
+    test.assert(has(perr("lower x\n"), "type name"))
+    test.assert(has(perr("Bad_Pkg/Thing x\n"), "type name"))
+    test.assert(has(perr("int32\n"), "no name"))
+
+@test
+fn test_name_refusals() [io]
+    test.assert(has(perr("int32 Bad\n"), "field name"))
+    test.assert(has(perr("int32 1x\n"), "field name"))
+    test.assert_eq_str(perr("int32 BAD=1\n"), "ok")
+    test.assert(has(perr("int32 bad=1\n"), "constant name"))
+    test.assert(has(perr("int32[3] A=1\n"), "primitive"))
+    test.assert(has(perr("geometry_msgs/Point A=1\n"), "primitive"))
+    test.assert(has(perr("int32 X=\n"), "integer"))
+    test.assert_eq_str(perr("int32 Mixed_Case9_x=1\n"),
+        "line 1: `Mixed_Case9_x` is not a constant name: use capitals and `_`")
+    test.assert_eq_str(perr("int32 A_1=1\n"), "ok")
+    match msggen.parse_msg("", "M", "int32 x\n")
+        Ok(_)  => test.fail("an empty package name")
+        Err(e) => test.assert(has(e, "message name"))
+    match msggen.parse_msg("bad", "m", "int32 x\n")
+        Ok(_)  => test.fail("a bad message name")
+        Err(e) => test.assert(has(e, "message name"))
+
+@test
+fn test_constants() [io]
+    match msggen.parse_msg("p",
+        "M",
+        "int32 A=-5\nint32 B=0x1F\nint8 C=-0x80\nfloat64 D=2.5\nfloat32 E=1e3\nfloat64 F=2E-3\nfloat64 G=7\nbool H=false\nbool I=True\nbool K2=False\nbool K3=true\nstring J='it'\nstring K=\"a b\"\nuint64 L=9223372036854775807\nint64 N=-9223372036854775808 # a comment\n")
+        Ok(m)  =>
+            test.assert_eq(list.len(m.consts), 15)
+            test.assert_eq_str(m.consts[0].expr, "-5")
+            test.assert_eq_str(m.consts[1].expr, "31")
+            test.assert_eq_str(m.consts[2].expr, "-128")
+            test.assert_eq_str(m.consts[3].expr, "2.5")
+            test.assert_eq_str(m.consts[4].expr, "1.0e3")
+            test.assert_eq_str(m.consts[5].expr, "2.0E-3")
+            test.assert_eq_str(m.consts[6].expr, "7.0")
+            test.assert_eq_str(m.consts[7].expr, "false")
+            test.assert_eq_str(m.consts[8].expr, "true")
+            test.assert_eq_str(m.consts[11].expr, "\"it\"")
+            test.assert_eq_str(m.consts[12].expr, "\"a b\"")
+            test.assert_eq_str(m.consts[13].expr, "9223372036854775807")
+            test.assert_eq(list.len(m.fields), 1)
+        Err(e) => test.fail(e)
+
+@test
+fn test_constant_refusals() [io]
+    test.assert(has(perr("uint8 A=256\n"), "does not fit"))
+    test.assert(has(perr("int8 A=-129\n"), "does not fit"))
+    test.assert(has(perr("int8 A=128\n"), "does not fit"))
+    test.assert(has(perr("uint8 A=-1\n"), "does not fit"))
+    test.assert(has(perr("int16 A=-32769\n"), "does not fit"))
+    test.assert(has(perr("uint16 A=65536\n"), "does not fit"))
+    test.assert(has(perr("int32 A=2147483648\n"), "does not fit"))
+    test.assert(has(perr("uint32 A=4294967296\n"), "does not fit"))
+    test.assert(has(perr("int64 A=9223372036854775808\n"), "integer"))
+    test.assert(has(perr("uint64 A=-1\n"), "does not fit"))
+    test.assert(has(perr("byte A=300\n"), "does not fit"))
+    test.assert(has(perr("char A=300\n"), "does not fit"))
+    test.assert(has(perr("int32 A=0x\n"), "integer"))
+    test.assert(has(perr("int32 A=0xZZ\n"), "integer"))
+    test.assert(has(perr("int32 A=0x11111111111111111\n"), "integer"))
+    test.assert(has(perr("int32 A=12ab\n"), "integer"))
+    test.assert(has(perr("int32 A=-\n"), "integer"))
+    test.assert_eq_str(perr("int32 A=0xaF\n"), "ok")
+    test.assert(has(perr("bool A=maybe\n"), "bool"))
+    test.assert(has(perr("string A=bare\n"), "quoted"))
+    test.assert(has(perr("string A='\n"), "quoted"))
+    test.assert(has(perr("string A='x\"\n"), "quoted"))
+    test.assert(has(perr("float64 A=x\n"), "number"))
+    test.assert(has(perr("float64 A=1.2.3\n"), "number"))
+    test.assert(has(perr("float64 A=\n"), "number"))
+
+@test
+fn test_comments_and_docs() [io]
+    // Comments, blank lines, a comment inside a string, and Windows line ends.
+    match msggen.parse_msg("p",
+        "M",
+        "# the message\n# continues\n\n# about x\nint32 x # trailing\r\n\nstring s \"a # b\" \n# stray\n")
+        Ok(m)  =>
+            test.assert_eq(list.len(m.doc), 2)
+            test.assert_eq_str(m.doc[0], "the message")
+            test.assert_eq(list.len(m.fields), 2)
+            test.assert_eq_str(m.fields[0].doc[0], "about x")
+            test.assert_eq_str(m.fields[0].doc[1], "trailing")
+            test.assert_eq(list.len(m.fields[1].defaults), 1)
+        Err(e) => test.fail(e)
+    // An escaped quote does not end a string, so the # after it is text.
+    match msggen.parse_msg("p", "M", "string s \"a\\\" # b\"\n")
+        Ok(m)  => test.assert(m.fields[0].has_default)
+        Err(e) => test.fail(e)
+
+@test
+fn test_defaults() [io]
+    match msggen.parse_msg("p",
+        "M",
+        "int32 a 5\nint8[3] b [1, -2, 3]\nuint16[] c [7]\nfloat64[] d []\nstring[] e\nfloat32[<=3] f [0.5,1.5]\nstring g 'x,y'\nbool h false\nint32 i\n")
+        Ok(m)  =>
+            test.assert_eq_str(m.fields[0].defaults[0], "5 as i32")
+            test.assert_eq_str(m.fields[1].defaults[1], "(-2) as i8")
+            test.assert_eq(list.len(m.fields[2].defaults), 1)
+            test.assert_eq(list.len(m.fields[3].defaults), 0)
+            test.assert(m.fields[3].has_default)
+            test.assert(not m.fields[4].has_default)
+            test.assert_eq(list.len(m.fields[5].defaults), 2)
+            test.assert_eq_str(m.fields[6].defaults[0], "\"x,y\"")
+            test.assert(not m.fields[8].has_default)
+        Err(e) => test.fail(e)
+
+@test
+fn test_default_refusals() [io]
+    test.assert(has(perr("Other x 5\n"), "nested"))
+    test.assert(has(perr("int32[3] x 5\n"), "list in brackets"))
+    test.assert(has(perr("int32[3] x [1, 2]\n"), "all 3"))
+    test.assert(has(perr("int32[<=2] x [1, 2, 3]\n"), "more elements"))
+    test.assert(has(perr("string[2] x ['a', 'b']\n"), "not supported"))
+    test.assert(has(perr("int32 x ten\n"), "integer"))
+    test.assert(has(perr("int32[] x [1, ten]\n"), "integer"))
+    test.assert_eq_str(perr("int32[] x [1, 2, 3, 4, 5]\n"), "ok")
+
+@test
+fn test_empty_message_gets_the_member_rosidl_adds() [io]
+    match msggen.parse_msg("p", "Empty", "# nothing\n")
+        Ok(m)  =>
+            test.assert_eq(list.len(m.fields), 1)
+            test.assert_eq_str(m.fields[0].name, "structure_needs_at_least_one_member")
+            test.assert_eq_str(m.type_name, "p/msg/Empty")
+            test.assert_eq_str(m.dds_name, "p::msg::dds_::Empty_")
+        Err(e) => test.fail(e)
+
+@test
+fn test_services() [io]
+    match msggen.parse_srv("p", "Add", "int64 a\nint64 b\n---\nint64 sum\n")
+        Ok(pair) =>
+            test.assert_eq(list.len(pair), 2)
+            test.assert_eq_str(pair[0].name, "AddRequest")
+            test.assert_eq_str(pair[0].type_name, "p/srv/Add_Request")
+            test.assert_eq_str(pair[1].name, "AddResponse")
+            test.assert_eq_str(pair[1].dds_name, "p::srv::dds_::Add_Response_")
+            test.assert_eq(list.len(pair[0].fields), 2)
+        Err(e)   => test.fail(e)
+    match msggen.parse_srv("p", "Add", "---\n  ---  \n")
+        Ok(_)  => test.fail("two dividers")
+        Err(e) => test.assert(has(e, "exactly one"))
+    match msggen.parse_srv("p", "Add", "int64 a\n")
+        Ok(_)  => test.fail("no divider")
+        Err(e) => test.assert(has(e, "exactly one"))
+    match msggen.parse_srv("p", "Add", "bad\n---\n")
+        Ok(_)  => test.fail("bad request")
+        Err(e) => test.assert(has(e, "line 1"))
+    match msggen.parse_srv("p", "Add", "---\nbad\n")
+        Ok(_)  => test.fail("bad response")
+        Err(e) => test.assert(has(e, "line 1"))
+    match msggen.parse_srv("p", "add", "---\n")
+        Ok(_)  => test.fail("bad name")
+        Err(e) => test.assert(has(e, "service name"))
+
+@test
+fn test_names_in_the_generated_module() [io]
+    // A message named for a type the language has is renamed; others are not.
+    test.assert_eq_str(msggen.struct_name("String"), "StringMsg")
+    test.assert_eq_str(msggen.struct_name("Duration"), "DurationMsg")
+    test.assert_eq_str(msggen.struct_name("Char"), "CharMsg")
+    test.assert_eq_str(msggen.struct_name("Twist"), "Twist")
+    test.assert_eq_str(msggen.struct_name("Time"), "Time")
+    // Every word the language reserves is given a trailing underscore.
+    let words = ["fn", "let", "var", "if", "then", "else", "elif", "for", "while", "match", "return",
+                 "struct", "enum", "trait", "impl", "type", "use", "async", "const", "await", "in",
+                 "and", "or", "not", "true", "false", "null", "self", "prompt", "system", "asm",
+                 "pass", "weak", "pub", "dyn", "as", "loop", "break", "continue", "mut", "alias",
+                 "register", "peripheral", "bsp", "static", "error_kind", "state_machine",
+                 "memory_map", "vector_table", "unsafe_discharge"]
+    for w in words
+        test.assert_eq_str(msggen.field_name(w), "${w}_")
+    test.assert_eq_str(msggen.field_name("frame_id"), "frame_id")
+
+@test
+fn test_generate_refusals() [io]
+    let m = msggen.parse_msg("p", "M", "int32 x\n")!
+    test.assert(has(gerr(msggen.generate("Bad", [m], msggen.default_options())), "package name"))
+    let zero = msggen.GenOptions { string_cap: 0, seq_cap: 4, prefix: "", sources: [] }
+    test.assert(has(gerr(msggen.generate("p", [m], zero)), "at least 1"))
+    let zero2 = msggen.GenOptions { string_cap: 4, seq_cap: 0, prefix: "", sources: [] }
+    test.assert(has(gerr(msggen.generate("p", [m], zero2)), "at least 1"))
+    test.assert(has(gerr(msggen.generate("q", [m], msggen.default_options())), "not in the package"))
+
+@test
+fn test_generated_tests_name_every_message() [io]
+    let m = msggen.parse_msg("p", "M", "int32 x\n")!
+    let text = msggen.generate_tests("p", [m], msggen.default_options())
+    test.assert(has(text, "fn test_p_M()"))
+    test.assert(has(text, "use p"))
+    test.assert(has(text, "let tn = p.M.type_name()"))
+
+@test
+fn test_capacities_and_prefix_reach_the_module() [io]
+    let m = msggen.parse_msg("p", "M", "string a\nint32[] b\nOther c\nq/Far d\n")!
+    let opt = msggen.GenOptions { string_cap: 12, seq_cap: 3, prefix: "x.", sources: ["M.msg"] }
+    match msggen.generate("p", [m], opt)
+        Ok(text) =>
+            test.assert(has(text, "String[12]"))
+            test.assert(has(text, "Vec[i32; 3]"))
+            test.assert(has(text, "use x.q"))
+            test.assert(has(text, "q.Far"))
+            test.assert(has(text, "//   M.msg"))
+        Err(e)   => test.fail(e)
+
+@test
+fn test_arguments() [io]
+    match msggen.parse_args(["--package", "p", "--out", "o.nv", "--tests", "t.nv", "--string-cap", "9",
+                             "--seq-cap", "5", "--prefix", "", "A.msg", "B.srv"])
+        Ok(j)  =>
+            test.assert_eq_str(j.pkg, "p")
+            test.assert_eq_str(j.out, "o.nv")
+            test.assert_eq_str(j.tests_out, "t.nv")
+            test.assert_eq(j.opt.string_cap, 9)
+            test.assert_eq(j.opt.seq_cap, 5)
+            test.assert_eq_str(j.opt.prefix, "")
+            test.assert_eq(list.len(j.files), 2)
+        Err(e) => test.fail(e)
+    test.assert(has(aerr(msggen.parse_args(["--package"])), "needs a value"))
+    test.assert(has(aerr(msggen.parse_args(["--nope", "1"])), "unknown option"))
+    test.assert(has(aerr(msggen.parse_args(["--seq-cap", "x"])), "positive"))
+    test.assert(has(aerr(msggen.parse_args(["--string-cap", "0"])), "positive"))
+    test.assert(has(aerr(msggen.parse_args(["--out", "o"])), "usage"))
+    test.assert(has(aerr(msggen.parse_args(["--package", "p"])), "usage"))
+    test.assert(has(aerr(msggen.parse_args(["--package", "p", "--out", "o"])), "no definition"))
+
+@test
+fn test_build_refusals_and_order() [io]
+    let job = msggen.parse_args(["--package", "p", "--out", "o", "d/B.msg", "d/A.msg"])!
+    // The structs come out in the order of the file names, not the job's.
+    let text = msggen.build_module(job, ["int32 b\n", "int32 a\n"])!
+    test.assert((str.index(text, "\nstruct A\n") ?? 0) < (str.index(text, "\nstruct B\n") ?? 0))
+    test.assert(has(gerr(msggen.build_module(job, ["int32 b\n"])), "every file"))
+    test.assert(has(gerr(msggen.build_tests(job, ["int32 b\n"])), "every file"))
+    test.assert(has(gerr(msggen.build_module(job, ["int32 b\n", "bad\n"])), "A.msg"))
+    let other = msggen.parse_args(["--package", "p", "--out", "o", "x.txt"])!
+    test.assert(has(gerr(msggen.build_module(other, [""])), "ends in .msg or .srv"))
+    let srv = msggen.parse_args(["--package", "p", "--out", "o", "d/S.srv"])!
+    test.assert(has(gerr(msggen.build_module(srv, ["int32 a\n"])), "S.srv"))
+
+// The fixture's defaults, constants and names, as the generated module has them.
+@test
+fn test_generated_defaults() [io]
+    let m = cdr_test_msgs.Shapes.new()
+    test.assert_eq(m.count as Int, 7)
+    test.assert(m.label.eq_str("a\"b\$c\\d"))
+    test.assert(m.tag.eq_str("x"))
+    test.assert_approx(m.gain, 1.5, 0.0)
+    test.assert(m.enabled)
+    test.assert_eq(m.trio[1] as Int, -2)
+    test.assert_eq(m.seeds.len(), 2)
+    test.assert_eq(m.big, 9)
+    test.assert_eq(cdr_test_msgs.SHAPES_LIMIT, 100)
+    test.assert_eq(cdr_test_msgs.SHAPES_MASK, 255)
+    test.assert_eq(cdr_test_msgs.SHAPES_LOW, -128)
+    test.assert(cdr_test_msgs.SHAPES_FLAG)
+    test.assert_eq_str(cdr_test_msgs.SHAPES_GREETING, "hi # there")
+    test.assert_approx(cdr_test_msgs.SHAPES_PI, 3.14159, 0.0)
+    test.assert(m.type_.len() == 0)
+    // The empty message is one byte on the wire.
+    var w = cdr.writer_le()
+    let _ = cdr_test_msgs.Nothing.new().encode(var w)
+    test.assert_eq(w.len(), 5)
+    // A string longer than the field is refused by the reader.
+    var long = cdr.writer_le()
+    long.put_i32(1 as i32)
+    long.begin_string(70)
+    for _ in 0..70
+        long.put_u8(0x61 as u8)
+    long.end_string()
+    var r = cdr.reader_from(long.buf)
+    var inner = cdr_test_msgs.Inner.new()
+    test.assert_eq_str(cdr.status_name(inner.decode_into(var r)), "too long")

@@ -1,0 +1,15 @@
+// msggen_cli.nv — the msggen program: reads ROS 2 interface definitions and
+// writes a novo-lang module.
+//
+//   novo run examples/msggen_cli.nv -- --package std_msgs --out src/std_msgs.nv \
+//       src/interfaces/std_msgs/msg/String.msg src/interfaces/std_msgs/msg/Header.msg
+//
+// All of the work is in `msggen.run`, which the test suite calls.  This
+// file passes it the command line and exits with its answer.
+
+use msggen
+use std.env
+use std.process
+
+fn main() [io, fs]
+    process.exit(msggen.run(env.user_args()))

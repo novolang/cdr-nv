@@ -30,10 +30,10 @@ repository  = "https://github.com/novolang/cdr-nv"
 maintainers = ["novo-lang"]
 novo        = ">= 0.23.0"
 
-# The entry point is the generator program, `msggen`.  A package that
-# depends on this one never builds it: a dependency's entry point is not
-# built, and the modules are what it uses.
-main        = "src/main.nv"
+# A library: no `main`, so `novo pkg build` type-checks and effect-checks
+# every module under `src/` and writes no binary.  The generator program
+# is `examples/msggen_cli.nv`; `novo run` builds it with the modules of
+# `src/`.
 
 [docs.pages]
 "README.md" = "Writing and reading ROS 2 messages in Common Data Representation"

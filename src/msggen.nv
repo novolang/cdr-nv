@@ -43,6 +43,7 @@
 // program in `tools/msggen.nv`.
 
 use std.str
+use std.fs
 
 // How a field's shape reads in the definition.
 pub const SHAPE_SCALAR = 0
@@ -119,15 +120,16 @@ pub struct GenOptions
     // The capacity of a sequence with no bound.
     seq_cap: Int
     // The module path under which the other packages' modules are found,
-    // with its trailing dot: `interfaces.` or empty.
+    // with its trailing dot: empty for modules beside the generated one, or
+    // `ros.` for modules in a directory `ros/`.
     prefix: Str
     // The names of the definition files, for the header comment.
     sources: [Str]
 
 // The options a first generation uses: 64-byte strings, 16-element
-// sequences, and the other packages under `interfaces.`.
+// sequences, and the other packages' modules beside the generated one.
 pub fn default_options() -> GenOptions
-    GenOptions { string_cap: 64, seq_cap: 16, prefix: "interfaces.", sources: [] }
+    GenOptions { string_cap: 64, seq_cap: 16, prefix: "", sources: [] }
 
 // ---------------------------------------------------------------------
 // Characters.
@@ -153,11 +155,11 @@ fn name_ok(s: Str, kind: Int) -> Bool
         let c = str.byte_at_or(s, i, 0)
         var ok = false
         if kind == 1
-            ok = is_lower(c) or (i > 0 and (is_digit(c) or c == 95))
+            ok = is_lower(c) or i > 0 and (is_digit(c) or c == 95)
         else if kind == 2
-            ok = is_upper(c) or (i > 0 and (is_digit(c) or c == 95))
+            ok = is_upper(c) or i > 0 and (is_digit(c) or c == 95)
         else
-            ok = is_upper(c) or (i > 0 and (is_lower(c) or is_digit(c)))
+            ok = is_upper(c) or i > 0 and (is_lower(c) or is_digit(c))
         if not ok
             return false
     true
@@ -275,11 +277,13 @@ fn parse_int(text: Str) -> ?Int
             if d < 0
                 return None
             v = v * 16 + d
-        return Some(if neg then 0 - v else v)
-    let n = str.to_int(s) ?? -1
-    if n < 0 or not is_digit(str.byte_at_or(s, 0, 0))
+        return Some((if neg then 0 - v else v))
+    if str.len(s) == 0
         return None
-    Some(if neg then 0 - n else n)
+    for i in 0..str.len(s)
+        if not is_digit(str.byte_at_or(s, i, 0))
+            return None
+    str.to_int(text)
 
 // A float written in the interface language, as a Novo literal: the
 // digits, a point, and an exponent if there was one.
@@ -292,14 +296,17 @@ fn float_literal(text: Str) -> ?Str
             return None
     let v = str.to_float(text)
     match v
-        None => None
+        None    => None
         Some(_) =>
             if str.contains(text, ".")
                 Some(text)
             else
                 let e = find_byte(text, 101)
                 let big = find_byte(text, 69)
-                let at = if e >= 0 then e else big
+                let at = if e >= 0
+                    e
+                else
+                    big
                 if at >= 0
                     Some("${str.slice(text, 0, at)}.0${tail(text, at)}")
                 else
@@ -311,10 +318,10 @@ fn string_literal(text: Str) -> ?Str
     if n < 2
         return None
     let q = str.byte_at_or(text, 0, 0)
-    if (q != 34 and q != 39) or str.byte_at_or(text, n - 1, 0) != q
+    if q != 34 and q != 39 or str.byte_at_or(text, n - 1, 0) != q
         return None
     var out = "\""
-    for i in 1..(n - 1)
+    for i in 1..n - 1
         let c = str.byte_at_or(text, i, 0)
         if c == 34 or c == 92 or c == 36
             out = "${out}\\"
@@ -343,7 +350,7 @@ fn plain_literal(prim: Str, text: Str) -> Result<Str, Str>
             None    => Err("`${text}` is not a number")
         return x
     match parse_int(text)
-        None => Err("`${text}` is not an integer")
+        None    => Err("`${text}` is not an integer")
         Some(v) =>
             let r = int_range(prim)
             if v < r.0 or v > r.1
@@ -440,23 +447,13 @@ fn split_comment(line: Str) -> (Str, Str)
             return (str.slice(line, 0, i), str.trim(tail(line, i + 1)))
     (line, "")
 
-// The elements of a default written as `[a, b, c]`, split at the
-// commas that are outside quotes.
+// The elements of a default written as `[a, b, c]`.  A default of an
+// array of strings is refused before this is called, so no element has
+// a comma inside it.
 fn split_list(inner: Str) -> [Str]
     var out: [Str] = []
-    var quote = 0
-    var start = 0
-    for i in 0..str.len(inner)
-        let c = str.byte_at_or(inner, i, 0)
-        if quote != 0
-            if c == quote
-                quote = 0
-        else if c == 34 or c == 39
-            quote = c
-        else if c == 44
-            list.push(out, str.trim(str.slice(inner, start, i)))
-            start = i + 1
-    list.push(out, str.trim(tail(inner, start)))
+    for item in str.split(inner, ",")
+        list.push(out, str.trim(item))
     out
 
 // The default of a field, one Novo expression per element.
@@ -486,14 +483,9 @@ fn parse_default(ty: TypeRef, text: Str) -> Result<[Str], Str>
         list.push(out, typed_literal(prim, plain))
     Ok(out)
 
-// The comment text of a `#` line: the words after the hash.
-fn comment_text(line: Str) -> Str
-    str.trim(tail(str.trim(line), 1))
-
 // Parse the lines of one message.  `ros_name` is the name in ROS, and
 // `name` the struct's.
-fn parse_body(pkg: Str, kind: Str, ros_name: Str, name: Str,
-              lines: [Str]) -> Result<Message, Str>
+fn parse_body(pkg: Str, kind: Str, ros_name: Str, name: Str, lines: [Str]) -> Result<Message, Str>
     var fields: [Field] = []
     var consts: [Const] = []
     var doc: [Str] = []
@@ -517,7 +509,8 @@ fn parse_body(pkg: Str, kind: Str, ros_name: Str, name: Str,
             let line = parse_line(pkg, code, note, pending)
             pending = []
             match line
-                Err(e) => return Err("line ${no}: ${e}")
+                Err(e)   =>
+                    return Err("line ${no}: ${e}")
                 Ok(item) =>
                     match item.0
                         Some(f) => list.push(fields, f)
@@ -534,8 +527,7 @@ fn parse_body(pkg: Str, kind: Str, ros_name: Str, name: Str,
 
 // One line of code: a field, or a constant.  The answer is a pair: the
 // field if it is one, and the constant otherwise.
-fn parse_line(pkg: Str, code: Str, note: Str,
-              pending: [Str]) -> Result<(?Field, Const), Str>
+fn parse_line(pkg: Str, code: Str, note: Str, pending: [Str]) -> Result<(?Field, Const), Str>
     let sp = find_space(code)
     if sp < 0
         return Err("`${code}` is a type with no name")
@@ -724,57 +716,57 @@ pub fn struct_name(ros: Str) -> Str
 // ```
 pub fn field_name(ros: Str) -> Str
     match ros
-        "fn"        => "fn_"
-        "let"       => "let_"
-        "var"       => "var_"
-        "if"        => "if_"
-        "then"      => "then_"
-        "else"      => "else_"
-        "elif"      => "elif_"
-        "for"       => "for_"
-        "while"     => "while_"
-        "match"     => "match_"
-        "return"    => "return_"
-        "struct"    => "struct_"
-        "enum"      => "enum_"
-        "trait"     => "trait_"
-        "impl"      => "impl_"
-        "type"      => "type_"
-        "use"       => "use_"
-        "async"     => "async_"
-        "const"     => "const_"
-        "await"     => "await_"
-        "in"        => "in_"
-        "and"       => "and_"
-        "or"        => "or_"
-        "not"       => "not_"
-        "true"      => "true_"
-        "false"     => "false_"
-        "null"      => "null_"
-        "self"      => "self_"
-        "prompt"    => "prompt_"
-        "system"    => "system_"
-        "asm"       => "asm_"
-        "pass"      => "pass_"
-        "weak"      => "weak_"
-        "pub"       => "pub_"
-        "dyn"       => "dyn_"
-        "as"        => "as_"
-        "loop"      => "loop_"
-        "break"     => "break_"
-        "continue"  => "continue_"
-        "mut"       => "mut_"
-        "alias"     => "alias_"
-        "register"  => "register_"
-        "peripheral" => "peripheral_"
-        "bsp"       => "bsp_"
-        "static"    => "static_"
-        "error_kind" => "error_kind_"
-        "state_machine" => "state_machine_"
-        "memory_map" => "memory_map_"
-        "vector_table" => "vector_table_"
+        "fn"               => "fn_"
+        "let"              => "let_"
+        "var"              => "var_"
+        "if"               => "if_"
+        "then"             => "then_"
+        "else"             => "else_"
+        "elif"             => "elif_"
+        "for"              => "for_"
+        "while"            => "while_"
+        "match"            => "match_"
+        "return"           => "return_"
+        "struct"           => "struct_"
+        "enum"             => "enum_"
+        "trait"            => "trait_"
+        "impl"             => "impl_"
+        "type"             => "type_"
+        "use"              => "use_"
+        "async"            => "async_"
+        "const"            => "const_"
+        "await"            => "await_"
+        "in"               => "in_"
+        "and"              => "and_"
+        "or"               => "or_"
+        "not"              => "not_"
+        "true"             => "true_"
+        "false"            => "false_"
+        "null"             => "null_"
+        "self"             => "self_"
+        "prompt"           => "prompt_"
+        "system"           => "system_"
+        "asm"              => "asm_"
+        "pass"             => "pass_"
+        "weak"             => "weak_"
+        "pub"              => "pub_"
+        "dyn"              => "dyn_"
+        "as"               => "as_"
+        "loop"             => "loop_"
+        "break"            => "break_"
+        "continue"         => "continue_"
+        "mut"              => "mut_"
+        "alias"            => "alias_"
+        "register"         => "register_"
+        "peripheral"       => "peripheral_"
+        "bsp"              => "bsp_"
+        "static"           => "static_"
+        "error_kind"       => "error_kind_"
+        "state_machine"    => "state_machine_"
+        "memory_map"       => "memory_map_"
+        "vector_table"     => "vector_table_"
         "unsafe_discharge" => "unsafe_discharge_"
-        _           => ros
+        _                  => ros
 
 // A message name in capitals with an underscore at each lowercase-to-
 // uppercase step: `NavSatStatus` is `NAV_SAT_STATUS`.
@@ -848,7 +840,7 @@ fn prim_zero(prim: Str) -> Str
 fn comment_lines(indent: Str, doc: [Str]) -> [Str]
     var out: [Str] = []
     for d in doc
-        list.push(out, if str.len(d) == 0 then "${indent}//" else "${indent}// ${d}")
+        list.push(out, (if str.len(d) == 0 then "${indent}//" else "${indent}// ${d}"))
     out
 
 // Whether a type is a primitive that is neither a string nor nested.
@@ -926,6 +918,28 @@ fn elem_zero(t: TypeRef, pkg: Str) -> Str
     else
         prim_zero(t.prim)
 
+// An array literal of the elements, in rows that stay inside 100
+// columns.  `start` is the column the literal begins at, and the rows
+// after the first are indented to the column of a field plus four,
+// which is the form `novo fmt` leaves alone.
+fn array_literal(items: [Str], start: Int) -> Str
+    var out = "["
+    var col = start + 1
+    var first = true
+    for i in 0..list.len(items)
+        let width = str.len(items[i]) + 2
+        if not first and col + width > 100
+            out = "${out},\n                ${items[i]}"
+            col = 16 + width
+        else if first
+            out = "${out}${items[i]}"
+            col = col + width
+        else
+            out = "${out}, ${items[i]}"
+            col = col + width
+        first = false
+    "${out}]"
+
 // The lines before the struct literal in `new` that build what the
 // literal cannot spell inline, and the expression for the field.  A
 // string or a sequence with contents is a local that is filled first,
@@ -948,8 +962,8 @@ fn init_field(f: Field, t: TypeRef, fname: Str, pkg: Str) -> (Str, [Str])
             list.push(pre, "        let z_${fname}: ${elem_type(t, pkg)} = String.new()")
             zero = "z_${fname}"
         for i in 0..t.count
-            list.push(items, if i < list.len(f.defaults) then f.defaults[i] else zero)
-        return ("[${str.join(items, ", ")}]", pre)
+            list.push(items, (if i < list.len(f.defaults) then f.defaults[i] else zero))
+        return (array_literal(items, 14 + str.len(fname)), pre)
     if list.len(f.defaults) > 0
         list.push(pre, "        var d_${fname}: ${ty} = Vec.new()")
         for d in f.defaults
@@ -975,15 +989,17 @@ fn string_helpers(cap: Int) -> [Str]
         "    for _ in 0..n",
         "        let _ = s.push(r.get_u8())",
         "    r.end_string()",
-        ""
-    ]
+        ""]
 
 // The text of one message: its constants, its struct and its methods.
 fn message_text(m: Message, opt: GenOptions) -> [Str]
     var out: [Str] = []
     let prefix = upper_snake(m.ros_name)
     for c in m.consts
-        for l in comment_lines("", c.doc)
+        var cdoc = c.doc[:]
+        if list.len(cdoc) == 0
+            cdoc = ["The constant ${c.name} of the ROS 2 message `${m.type_name}`."]
+        for l in comment_lines("", cdoc)
             list.push(out, l)
         list.push(out, "pub const ${prefix}_${c.name} = ${c.expr}")
         list.push(out, "")
@@ -992,8 +1008,8 @@ fn message_text(m: Message, opt: GenOptions) -> [Str]
         list.push(out, "//")
         for l in comment_lines("", m.doc)
             list.push(out, l)
-    list.push(out, "@value")
-    list.push(out, "pub struct ${m.name}")
+    list.push(out, "pub @value")
+    list.push(out, "struct ${m.name}")
     var inits: [Str] = []
     var pre: [Str] = []
     var puts: [Str] = []
@@ -1025,17 +1041,18 @@ fn message_text(m: Message, opt: GenOptions) -> [Str]
     list.push(out, "    fn dds_type_name() -> Str")
     list.push(out, "        \"${m.dds_name}\"")
     list.push(out, "")
-    list.push(out, "    // A message with every field at its default, which is zero unless the definition says otherwise.")
+    list.push(out,
+        "    // A message with every field at its default, which is zero unless the definition says otherwise.")
     list.push(out, "    fn new() -> ${m.name}")
     for l in pre
         list.push(out, l)
     list.push(out, "        ${m.name} {")
-    list.push(out, str.join(inits, ",\n"))
-    list.push(out, "        }")
+    list.push(out, "${str.join(inits, ",\n")} }")
     list.push(out, "")
     for l in sample_lines(m, opt)
         list.push(out, l)
-    list.push(out, "    // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.")
+    list.push(out,
+        "    // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.")
     list.push(out, "    fn write_to(self, var w: cdr.Writer)")
     for l in puts
         list.push(out, l)
@@ -1045,7 +1062,8 @@ fn message_text(m: Message, opt: GenOptions) -> [Str]
     for l in gets
         list.push(out, l)
     list.push(out, "")
-    list.push(out, "    // Write the message to `w` and answer the writer's status: `Success`, or the first thing that went wrong.")
+    list.push(out,
+        "    // Write the message to `w` and answer the writer's status: `Success`, or the first thing that went wrong.")
     list.push(out, "    fn encode(self, var w: cdr.Writer) -> cdr.Status")
     list.push(out, "        self.write_to(var w)")
     list.push(out, "        w.result()")
@@ -1055,8 +1073,10 @@ fn message_text(m: Message, opt: GenOptions) -> [Str]
     list.push(out, "        self.read_from(var r)")
     list.push(out, "        r.result()")
     list.push(out, "")
-    list.push(out, "    // Read a message from `r`, or answer None; the reason is `r.result()`.  The answer is")
-    list.push(out, "    // an optional value and not a `Result` because a `Result` that carries a value is a")
+    list.push(out,
+        "    // Read a message from `r`, or answer None; the reason is `r.result()`.  The answer is")
+    list.push(out,
+        "    // an optional value and not a `Result` because a `Result` that carries a value is a")
     list.push(out, "    // heap cell on a device.")
     list.push(out, "    fn decode(var r: cdr.Reader) -> ?${m.name}")
     list.push(out, "        var m = ${m.name}.new()")
@@ -1173,10 +1193,13 @@ fn sample_field(t: TypeRef, fname: Str, k: Int, pkg: Str) -> (Str, [Str])
         var items: [Str] = []
         for j in 0..t.count
             list.push(items, sample_elem(t, pkg, k, j, sname))
-        return ("[${str.join(items, ", ")}]", pre)
+        return (array_literal(items, 14 + str.len(fname)), pre)
     let vname = "v_${fname}"
     list.push(pre, "        var ${vname}: ${field_type(t, pkg)} = Vec.new()")
-    let n = if t.count < 2 then t.count else 2
+    let n = if t.count < 2
+        t.count
+    else
+        2
     for j in 0..n
         list.push(pre, "        let _ = ${vname}.push(${sample_elem(t, pkg, k, j, sname)})")
     (vname, pre)
@@ -1195,14 +1218,15 @@ fn sample_lines(m: Message, opt: GenOptions) -> [Str]
             list.push(pre, l)
         list.push(inits, "            ${fname}: ${s.0}")
         k = k + 1
-    list.push(out, "    // A message with every field set to a recognisable value that is not zero: strings of")
-    list.push(out, "    // text, sequences of two elements, numbers that differ by field.  A test round-trips it.")
+    list.push(out,
+        "    // A message with every field set to a recognisable value that is not zero: strings of")
+    list.push(out,
+        "    // text, sequences of two elements, numbers that differ by field.  A test round-trips it.")
     list.push(out, "    fn sample() -> ${m.name}")
     for l in pre
         list.push(out, l)
     list.push(out, "        ${m.name} {")
-    list.push(out, str.join(inits, ",\n"))
-    list.push(out, "        }")
+    list.push(out, "${str.join(inits, ",\n")} }")
     list.push(out, "")
     out
 
@@ -1214,7 +1238,8 @@ fn sample_lines(m: Message, opt: GenOptions) -> [Str]
 // generated module as `interfaces.<pkg>`.
 pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
     var out: [Str] = []
-    list.push(out, "// gen_${pkg}_tests.nv — the round trip of every message of ${pkg}, generated by msggen.")
+    list.push(out,
+        "// gen_${pkg}_tests.nv — the round trip of every message of ${pkg}, generated by msggen.")
     list.push(out, "//")
     list.push(out, "// Do not edit this file.  Change msggen or the definitions and generate it again.")
     list.push(out, "//")
@@ -1247,8 +1272,10 @@ pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
         list.push(out, "@test")
         list.push(out, "fn test_${pkg}_${m.ros_name}() [io]")
         list.push(out, "    let m = ${ty}.sample()")
-        list.push(out, "    test.assert_eq_str(${ty}.type_name(), \"${m.type_name}\")")
-        list.push(out, "    test.assert_eq_str(${ty}.dds_type_name(), \"${m.dds_name}\")")
+        list.push(out, "    let tn = ${ty}.type_name()")
+        list.push(out, "    test.assert_eq_str(tn, \"${m.type_name}\")")
+        list.push(out, "    let dn = ${ty}.dds_type_name()")
+        list.push(out, "    test.assert_eq_str(dn, \"${m.dds_name}\")")
         list.push(out, "    for le in [true, false]")
         list.push(out, "        var w = writer(le)")
         list.push(out, "        test.assert_eq_str(cdr.status_name(m.encode(var w)), \"success\")")
@@ -1265,11 +1292,12 @@ pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
         list.push(out, "                var w3 = writer(le)")
         list.push(out, "                let _ = x.encode(var w3)")
         list.push(out, "                test.assert_eq_str(hex_of(w3), hex_of(w))")
-        list.push(out, "            None => test.fail(\"a whole message did not decode\")")
+        list.push(out, "            None    => test.fail(\"a whole message did not decode\")")
         list.push(out, "        var r3 = reader_of(w, 1)")
         list.push(out, "        match ${ty}.decode(var r3)")
         list.push(out, "            Some(_) => test.fail(\"a truncated message decoded\")")
-        list.push(out, "            None    => test.assert_eq_str(cdr.status_name(r3.result()), \"truncated\")")
+        list.push(out,
+            "            None    => test.assert_eq_str(cdr.status_name(r3.result()), \"truncated\")")
         list.push(out, "")
     str.join(out, "\n")
 
@@ -1320,15 +1348,24 @@ pub fn parse_args(args: [Str]) -> Result<Job, Str>
             else if a == "--tests"
                 tests_out = v
             else if a == "--prefix"
-                opt = GenOptions { string_cap: opt.string_cap, seq_cap: opt.seq_cap, prefix: v, sources: [] }
+                opt = GenOptions { string_cap: opt.string_cap,
+                    seq_cap: opt.seq_cap,
+                    prefix: v,
+                    sources: [] }
             else if a == "--string-cap" or a == "--seq-cap"
                 let n = str.to_int(v) ?? 0
                 if n < 1
                     return Err("${a} is a positive integer, not `${v}`")
                 if a == "--string-cap"
-                    opt = GenOptions { string_cap: n, seq_cap: opt.seq_cap, prefix: opt.prefix, sources: [] }
+                    opt = GenOptions { string_cap: n,
+                        seq_cap: opt.seq_cap,
+                        prefix: opt.prefix,
+                        sources: [] }
                 else
-                    opt = GenOptions { string_cap: opt.string_cap, seq_cap: n, prefix: opt.prefix, sources: [] }
+                    opt = GenOptions { string_cap: opt.string_cap,
+                        seq_cap: n,
+                        prefix: opt.prefix,
+                        sources: [] }
             else
                 return Err("unknown option ${a}")
             i = i + 2
@@ -1380,14 +1417,16 @@ fn read_messages(job: Job, texts: [Str]) -> Result<([Message], [Str]), Str>
             let name = str.slice(file, 0, str.len(file) - 4)
             match parse_msg(job.pkg, name, texts[i])
                 Ok(x)  => list.push(msgs, x)
-                Err(e) => return Err("${file}: ${e}")
+                Err(e) =>
+                    return Err("${file}: ${e}")
         else if str.ends_with(file, ".srv")
             let name = str.slice(file, 0, str.len(file) - 4)
             match parse_srv(job.pkg, name, texts[i])
                 Ok(x)  =>
                     list.push(msgs, x[0])
                     list.push(msgs, x[1])
-                Err(e) => return Err("${file}: ${e}")
+                Err(e) =>
+                    return Err("${file}: ${e}")
         else
             return Err("${file}: a definition ends in .msg or .srv")
     Ok((msgs, names))
@@ -1407,3 +1446,46 @@ pub fn build_module(job: Job, texts: [Str]) -> Result<Str, Str>
 pub fn build_tests(job: Job, texts: [Str]) -> Result<Str, Str>
     let read = read_messages(job, texts)!
     Ok(generate_tests(job.pkg, read.0, options_of(job, read.1)))
+
+// Print a failure and answer the exit status for it.
+fn report(why: Str) -> Int [io]
+    println("msggen: ${why}")
+    1
+
+// Run the program: read the arguments, read the definition files, write
+// the module and, if asked, the tests.  The answer is the exit status:
+// 0 when everything was written, 1 after a message on standard output.
+//
+// ```novo
+// use msggen
+//
+// fn main() [io, fs]
+//     let status = msggen.run(["--package", "p", "--out", "p.nv"])
+//     println("${status}")   // 1: no definition files
+// ```
+pub fn run(args: [Str]) -> Int [io, fs]
+    let job = match parse_args(args)
+        Err(e) =>
+            return report(e)
+        Ok(j)  => j
+    var texts: [Str] = []
+    for f in job.files
+        match fs.read(f)
+            Some(t) => list.push(texts, t)
+            None    =>
+                return report("cannot read ${f}")
+    let read = match read_messages(job, texts)
+        Err(e) =>
+            return report(e)
+        Ok(r)  => r
+    let opt = options_of(job, read.1)
+    let module = match generate(job.pkg, read.0, opt)
+        // cov: skip — generate refuses a package name and a capacity that parse_args and read_messages have already accepted
+        Err(e) =>
+            return report(e)
+        Ok(t)  => t
+    if not fs.write(job.out, module)
+        return report("cannot write ${job.out}")
+    if job.tests_out != "" and not fs.write(job.tests_out, generate_tests(job.pkg, read.0, opt))
+        return report("cannot write ${job.tests_out}")
+    0

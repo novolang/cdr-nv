@@ -11,7 +11,7 @@ use std.bytes
 use std.test
 use cdr
 use cdrbytes
-use interfaces.builtin_interfaces
+use builtin_interfaces
 
 fn writer(le: Bool) -> cdr.Writer
     if le
@@ -29,8 +29,10 @@ fn reader_of(w: cdr.Writer, cut: Int) -> cdr.Reader
 @test
 fn test_builtin_interfaces_Duration() [io]
     let m = builtin_interfaces.DurationMsg.sample()
-    test.assert_eq_str(builtin_interfaces.DurationMsg.type_name(), "builtin_interfaces/msg/Duration")
-    test.assert_eq_str(builtin_interfaces.DurationMsg.dds_type_name(), "builtin_interfaces::msg::dds_::Duration_")
+    let tn = builtin_interfaces.DurationMsg.type_name()
+    test.assert_eq_str(tn, "builtin_interfaces/msg/Duration")
+    let dn = builtin_interfaces.DurationMsg.dds_type_name()
+    test.assert_eq_str(dn, "builtin_interfaces::msg::dds_::Duration_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -47,7 +49,7 @@ fn test_builtin_interfaces_Duration() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match builtin_interfaces.DurationMsg.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -56,8 +58,10 @@ fn test_builtin_interfaces_Duration() [io]
 @test
 fn test_builtin_interfaces_Time() [io]
     let m = builtin_interfaces.Time.sample()
-    test.assert_eq_str(builtin_interfaces.Time.type_name(), "builtin_interfaces/msg/Time")
-    test.assert_eq_str(builtin_interfaces.Time.dds_type_name(), "builtin_interfaces::msg::dds_::Time_")
+    let tn = builtin_interfaces.Time.type_name()
+    test.assert_eq_str(tn, "builtin_interfaces/msg/Time")
+    let dn = builtin_interfaces.Time.dds_type_name()
+    test.assert_eq_str(dn, "builtin_interfaces::msg::dds_::Time_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -74,7 +78,7 @@ fn test_builtin_interfaces_Time() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match builtin_interfaces.Time.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")

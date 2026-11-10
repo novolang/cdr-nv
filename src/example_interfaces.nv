@@ -11,8 +11,8 @@
 use cdr
 
 // The ROS 2 message `example_interfaces/srv/AddTwoInts_Request`.
-@value
-pub struct AddTwoIntsRequest
+pub @value
+struct AddTwoIntsRequest
     // a
     a: Int
     // b
@@ -31,16 +31,14 @@ impl AddTwoIntsRequest
     fn new() -> AddTwoIntsRequest
         AddTwoIntsRequest {
             a: 0,
-            b: 0
-        }
+            b: 0 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> AddTwoIntsRequest
         AddTwoIntsRequest {
             a: 1,
-            b: 2
-        }
+            b: 2 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -73,8 +71,8 @@ impl AddTwoIntsRequest
         None
 
 // The ROS 2 message `example_interfaces/srv/AddTwoInts_Response`.
-@value
-pub struct AddTwoIntsResponse
+pub @value
+struct AddTwoIntsResponse
     // sum
     sum: Int
 
@@ -90,15 +88,13 @@ impl AddTwoIntsResponse
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> AddTwoIntsResponse
         AddTwoIntsResponse {
-            sum: 0
-        }
+            sum: 0 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> AddTwoIntsResponse
         AddTwoIntsResponse {
-            sum: 1
-        }
+            sum: 1 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)

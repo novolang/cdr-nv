@@ -16,8 +16,8 @@ use cdr
 // Duration defines a period between two time points.
 // Messages of this datatype are of ROS Time following this design:
 // https://design.ros2.org/articles/clock_and_time.html
-@value
-pub struct DurationMsg
+pub @value
+struct DurationMsg
     // Seconds component, range is valid over any possible int32 value.
     sec: i32
     // Nanoseconds component in the range of [0, 10e9).
@@ -36,16 +36,14 @@ impl DurationMsg
     fn new() -> DurationMsg
         DurationMsg {
             sec: 0 as i32,
-            nanosec: 0 as u32
-        }
+            nanosec: 0 as u32 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> DurationMsg
         DurationMsg {
             sec: 1 as i32,
-            nanosec: 2 as u32
-        }
+            nanosec: 2 as u32 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -81,8 +79,8 @@ impl DurationMsg
 //
 // This message communicates ROS Time defined here:
 // https://design.ros2.org/articles/clock_and_time.html
-@value
-pub struct Time
+pub @value
+struct Time
     // The seconds component, valid over all int32 values.
     sec: i32
     // The nanoseconds component, valid in the range [0, 10e9).
@@ -101,16 +99,14 @@ impl Time
     fn new() -> Time
         Time {
             sec: 0 as i32,
-            nanosec: 0 as u32
-        }
+            nanosec: 0 as u32 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> Time
         Time {
             sec: 1 as i32,
-            nanosec: 2 as u32
-        }
+            nanosec: 2 as u32 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)

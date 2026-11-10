@@ -11,7 +11,7 @@ use std.bytes
 use std.test
 use cdr
 use cdrbytes
-use interfaces.std_srvs
+use std_srvs
 
 fn writer(le: Bool) -> cdr.Writer
     if le
@@ -29,8 +29,10 @@ fn reader_of(w: cdr.Writer, cut: Int) -> cdr.Reader
 @test
 fn test_std_srvs_Empty_Request() [io]
     let m = std_srvs.EmptyRequest.sample()
-    test.assert_eq_str(std_srvs.EmptyRequest.type_name(), "std_srvs/srv/Empty_Request")
-    test.assert_eq_str(std_srvs.EmptyRequest.dds_type_name(), "std_srvs::srv::dds_::Empty_Request_")
+    let tn = std_srvs.EmptyRequest.type_name()
+    test.assert_eq_str(tn, "std_srvs/srv/Empty_Request")
+    let dn = std_srvs.EmptyRequest.dds_type_name()
+    test.assert_eq_str(dn, "std_srvs::srv::dds_::Empty_Request_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -47,7 +49,7 @@ fn test_std_srvs_Empty_Request() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_srvs.EmptyRequest.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -56,8 +58,10 @@ fn test_std_srvs_Empty_Request() [io]
 @test
 fn test_std_srvs_Empty_Response() [io]
     let m = std_srvs.EmptyResponse.sample()
-    test.assert_eq_str(std_srvs.EmptyResponse.type_name(), "std_srvs/srv/Empty_Response")
-    test.assert_eq_str(std_srvs.EmptyResponse.dds_type_name(), "std_srvs::srv::dds_::Empty_Response_")
+    let tn = std_srvs.EmptyResponse.type_name()
+    test.assert_eq_str(tn, "std_srvs/srv/Empty_Response")
+    let dn = std_srvs.EmptyResponse.dds_type_name()
+    test.assert_eq_str(dn, "std_srvs::srv::dds_::Empty_Response_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -74,7 +78,7 @@ fn test_std_srvs_Empty_Response() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_srvs.EmptyResponse.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -83,8 +87,10 @@ fn test_std_srvs_Empty_Response() [io]
 @test
 fn test_std_srvs_SetBool_Request() [io]
     let m = std_srvs.SetBoolRequest.sample()
-    test.assert_eq_str(std_srvs.SetBoolRequest.type_name(), "std_srvs/srv/SetBool_Request")
-    test.assert_eq_str(std_srvs.SetBoolRequest.dds_type_name(), "std_srvs::srv::dds_::SetBool_Request_")
+    let tn = std_srvs.SetBoolRequest.type_name()
+    test.assert_eq_str(tn, "std_srvs/srv/SetBool_Request")
+    let dn = std_srvs.SetBoolRequest.dds_type_name()
+    test.assert_eq_str(dn, "std_srvs::srv::dds_::SetBool_Request_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -101,7 +107,7 @@ fn test_std_srvs_SetBool_Request() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_srvs.SetBoolRequest.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -110,8 +116,10 @@ fn test_std_srvs_SetBool_Request() [io]
 @test
 fn test_std_srvs_SetBool_Response() [io]
     let m = std_srvs.SetBoolResponse.sample()
-    test.assert_eq_str(std_srvs.SetBoolResponse.type_name(), "std_srvs/srv/SetBool_Response")
-    test.assert_eq_str(std_srvs.SetBoolResponse.dds_type_name(), "std_srvs::srv::dds_::SetBool_Response_")
+    let tn = std_srvs.SetBoolResponse.type_name()
+    test.assert_eq_str(tn, "std_srvs/srv/SetBool_Response")
+    let dn = std_srvs.SetBoolResponse.dds_type_name()
+    test.assert_eq_str(dn, "std_srvs::srv::dds_::SetBool_Response_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -128,7 +136,7 @@ fn test_std_srvs_SetBool_Response() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_srvs.SetBoolResponse.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -137,8 +145,10 @@ fn test_std_srvs_SetBool_Response() [io]
 @test
 fn test_std_srvs_Trigger_Request() [io]
     let m = std_srvs.TriggerRequest.sample()
-    test.assert_eq_str(std_srvs.TriggerRequest.type_name(), "std_srvs/srv/Trigger_Request")
-    test.assert_eq_str(std_srvs.TriggerRequest.dds_type_name(), "std_srvs::srv::dds_::Trigger_Request_")
+    let tn = std_srvs.TriggerRequest.type_name()
+    test.assert_eq_str(tn, "std_srvs/srv/Trigger_Request")
+    let dn = std_srvs.TriggerRequest.dds_type_name()
+    test.assert_eq_str(dn, "std_srvs::srv::dds_::Trigger_Request_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -155,7 +165,7 @@ fn test_std_srvs_Trigger_Request() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_srvs.TriggerRequest.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -164,8 +174,10 @@ fn test_std_srvs_Trigger_Request() [io]
 @test
 fn test_std_srvs_Trigger_Response() [io]
     let m = std_srvs.TriggerResponse.sample()
-    test.assert_eq_str(std_srvs.TriggerResponse.type_name(), "std_srvs/srv/Trigger_Response")
-    test.assert_eq_str(std_srvs.TriggerResponse.dds_type_name(), "std_srvs::srv::dds_::Trigger_Response_")
+    let tn = std_srvs.TriggerResponse.type_name()
+    test.assert_eq_str(tn, "std_srvs/srv/Trigger_Response")
+    let dn = std_srvs.TriggerResponse.dds_type_name()
+    test.assert_eq_str(dn, "std_srvs::srv::dds_::Trigger_Response_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -182,7 +194,7 @@ fn test_std_srvs_Trigger_Response() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match std_srvs.TriggerResponse.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")

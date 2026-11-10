@@ -29,8 +29,8 @@ fn get_str_64(var r: cdr.Reader, var s: String[64])
     r.end_string()
 
 // The ROS 2 message `std_srvs/srv/Empty_Request`.
-@value
-pub struct EmptyRequest
+pub @value
+struct EmptyRequest
     // rosidl gives an empty message one byte on the wire.
     structure_needs_at_least_one_member: u8
 
@@ -46,15 +46,13 @@ impl EmptyRequest
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> EmptyRequest
         EmptyRequest {
-            structure_needs_at_least_one_member: 0 as u8
-        }
+            structure_needs_at_least_one_member: 0 as u8 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> EmptyRequest
         EmptyRequest {
-            structure_needs_at_least_one_member: 1 as u8
-        }
+            structure_needs_at_least_one_member: 1 as u8 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -85,8 +83,8 @@ impl EmptyRequest
         None
 
 // The ROS 2 message `std_srvs/srv/Empty_Response`.
-@value
-pub struct EmptyResponse
+pub @value
+struct EmptyResponse
     // rosidl gives an empty message one byte on the wire.
     structure_needs_at_least_one_member: u8
 
@@ -102,15 +100,13 @@ impl EmptyResponse
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> EmptyResponse
         EmptyResponse {
-            structure_needs_at_least_one_member: 0 as u8
-        }
+            structure_needs_at_least_one_member: 0 as u8 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> EmptyResponse
         EmptyResponse {
-            structure_needs_at_least_one_member: 1 as u8
-        }
+            structure_needs_at_least_one_member: 1 as u8 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -141,8 +137,8 @@ impl EmptyResponse
         None
 
 // The ROS 2 message `std_srvs/srv/SetBool_Request`.
-@value
-pub struct SetBoolRequest
+pub @value
+struct SetBoolRequest
     // e.g. for hardware enabling / disabling
     data: Bool
 
@@ -158,15 +154,13 @@ impl SetBoolRequest
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> SetBoolRequest
         SetBoolRequest {
-            data: false
-        }
+            data: false }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> SetBoolRequest
         SetBoolRequest {
-            data: true
-        }
+            data: true }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -197,8 +191,8 @@ impl SetBoolRequest
         None
 
 // The ROS 2 message `std_srvs/srv/SetBool_Response`.
-@value
-pub struct SetBoolResponse
+pub @value
+struct SetBoolResponse
     // indicate successful run of triggered service
     success: Bool
     // informational, e.g. for error messages
@@ -217,8 +211,7 @@ impl SetBoolResponse
     fn new() -> SetBoolResponse
         SetBoolResponse {
             success: false,
-            message: String.new()
-        }
+            message: String.new() }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
@@ -227,8 +220,7 @@ impl SetBoolResponse
         let _ = s_message.push_str("s1")
         SetBoolResponse {
             success: true,
-            message: s_message
-        }
+            message: s_message }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -261,8 +253,8 @@ impl SetBoolResponse
         None
 
 // The ROS 2 message `std_srvs/srv/Trigger_Request`.
-@value
-pub struct TriggerRequest
+pub @value
+struct TriggerRequest
     // rosidl gives an empty message one byte on the wire.
     structure_needs_at_least_one_member: u8
 
@@ -278,15 +270,13 @@ impl TriggerRequest
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> TriggerRequest
         TriggerRequest {
-            structure_needs_at_least_one_member: 0 as u8
-        }
+            structure_needs_at_least_one_member: 0 as u8 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> TriggerRequest
         TriggerRequest {
-            structure_needs_at_least_one_member: 1 as u8
-        }
+            structure_needs_at_least_one_member: 1 as u8 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -317,8 +307,8 @@ impl TriggerRequest
         None
 
 // The ROS 2 message `std_srvs/srv/Trigger_Response`.
-@value
-pub struct TriggerResponse
+pub @value
+struct TriggerResponse
     // indicate successful run of triggered service
     success: Bool
     // informational, e.g. for error messages
@@ -337,8 +327,7 @@ impl TriggerResponse
     fn new() -> TriggerResponse
         TriggerResponse {
             success: false,
-            message: String.new()
-        }
+            message: String.new() }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
@@ -347,8 +336,7 @@ impl TriggerResponse
         let _ = s_message.push_str("s1")
         TriggerResponse {
             success: true,
-            message: s_message
-        }
+            message: s_message }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)

@@ -33,8 +33,8 @@ fn get_str_64(var r: cdr.Reader, var s: String[64])
 // The ROS 2 message `rcl_interfaces/msg/FloatingPointRange`.
 //
 // Represents bounds and a step value for a floating point typed parameter.
-@value
-pub struct FloatingPointRange
+pub @value
+struct FloatingPointRange
     // Start value for valid values, inclusive.
     from_value: Float
     // End value for valid values, inclusive.
@@ -56,8 +56,7 @@ impl FloatingPointRange
         FloatingPointRange {
             from_value: 0.0,
             to_value: 0.0,
-            step: 0.0
-        }
+            step: 0.0 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
@@ -65,8 +64,7 @@ impl FloatingPointRange
         FloatingPointRange {
             from_value: 1.5,
             to_value: 2.5,
-            step: 3.5
-        }
+            step: 3.5 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -103,8 +101,8 @@ impl FloatingPointRange
 // The ROS 2 message `rcl_interfaces/msg/IntegerRange`.
 //
 // Represents bounds and a step value for an integer typed parameter.
-@value
-pub struct IntegerRange
+pub @value
+struct IntegerRange
     // Start value for valid values, inclusive.
     from_value: Int
     // End value for valid values, inclusive.
@@ -126,8 +124,7 @@ impl IntegerRange
         IntegerRange {
             from_value: 0,
             to_value: 0,
-            step: 0
-        }
+            step: 0 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
@@ -135,8 +132,7 @@ impl IntegerRange
         IntegerRange {
             from_value: 1,
             to_value: 2,
-            step: 3
-        }
+            step: 3 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -173,8 +169,8 @@ impl IntegerRange
 // The ROS 2 message `rcl_interfaces/msg/ParameterDescriptor`.
 //
 // This is the message to communicate a parameter's descriptor.
-@value
-pub struct ParameterDescriptor
+pub @value
+struct ParameterDescriptor
     // The name of the parameter.
     name: String[64]
     // Enum values are defined in the `ParameterType.msg` message.
@@ -212,8 +208,7 @@ impl ParameterDescriptor
             read_only: false,
             dynamic_typing: false,
             floating_point_range: Vec.new(),
-            integer_range: Vec.new()
-        }
+            integer_range: Vec.new() }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
@@ -236,8 +231,7 @@ impl ParameterDescriptor
             read_only: true,
             dynamic_typing: true,
             floating_point_range: v_floating_point_range,
-            integer_range: v_integer_range
-        }
+            integer_range: v_integer_range }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -298,29 +292,38 @@ impl ParameterDescriptor
 // Default value, which implies this is not a valid parameter.
 pub const PARAMETER_TYPE_PARAMETER_NOT_SET = 0
 
+// The constant PARAMETER_BOOL of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_BOOL = 1
 
+// The constant PARAMETER_INTEGER of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_INTEGER = 2
 
+// The constant PARAMETER_DOUBLE of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_DOUBLE = 3
 
+// The constant PARAMETER_STRING of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_STRING = 4
 
+// The constant PARAMETER_BYTE_ARRAY of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_BYTE_ARRAY = 5
 
+// The constant PARAMETER_BOOL_ARRAY of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_BOOL_ARRAY = 6
 
+// The constant PARAMETER_INTEGER_ARRAY of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_INTEGER_ARRAY = 7
 
+// The constant PARAMETER_DOUBLE_ARRAY of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_DOUBLE_ARRAY = 8
 
+// The constant PARAMETER_STRING_ARRAY of the ROS 2 message `rcl_interfaces/msg/ParameterType`.
 pub const PARAMETER_TYPE_PARAMETER_STRING_ARRAY = 9
 
 // The ROS 2 message `rcl_interfaces/msg/ParameterType`.
 //
 // These types correspond to the value that is set in the ParameterValue message.
-@value
-pub struct ParameterType
+pub @value
+struct ParameterType
     // rosidl gives an empty message one byte on the wire.
     structure_needs_at_least_one_member: u8
 
@@ -336,15 +339,13 @@ impl ParameterType
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> ParameterType
         ParameterType {
-            structure_needs_at_least_one_member: 0 as u8
-        }
+            structure_needs_at_least_one_member: 0 as u8 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> ParameterType
         ParameterType {
-            structure_needs_at_least_one_member: 1 as u8
-        }
+            structure_needs_at_least_one_member: 1 as u8 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -380,8 +381,8 @@ impl ParameterType
 // ParameterType.PARAMETER_NOT_SET indicates that the parameter was not set
 // (if gotten) or is uninitialized.
 // Values are enumerated in `ParameterType.msg`.
-@value
-pub struct ParameterValue
+pub @value
+struct ParameterValue
     // The type of this parameter, which corresponds to the appropriate field below.
     type_: u8
     // "Variant" style storage of the parameter value.  Only the field corresponding to the type is used.
@@ -424,8 +425,7 @@ impl ParameterValue
             bool_array_value: Vec.new(),
             integer_array_value: Vec.new(),
             double_array_value: Vec.new(),
-            string_array_value: Vec.new()
-        }
+            string_array_value: Vec.new() }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
@@ -459,8 +459,7 @@ impl ParameterValue
             bool_array_value: v_bool_array_value,
             integer_array_value: v_integer_array_value,
             double_array_value: v_double_array_value,
-            string_array_value: v_string_array_value
-        }
+            string_array_value: v_string_array_value }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)

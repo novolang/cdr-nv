@@ -1,0 +1,128 @@
+// interfaces_current_tests.nv — the committed modules are what msggen
+// writes today.
+//
+// Each bundled package is a set of `.msg` and `.srv` files under
+// `src/interfaces/<package>/`, the module `src/<package>.nv`
+// generated from them, and the round-trip tests
+// `tests/gen_<package>_tests.nv`.  This file generates the module and the
+// tests again in memory and compares them, byte for byte, with the files
+// on disk.  A change to msggen, or to a definition, that was not
+// followed by `bash scripts/regen.sh` fails here and names the package.
+//
+// It also runs the program entry, `msggen.run`, against one package and
+// writes to `_novo/`, so the part that reads and writes files is the part
+// that is tested.
+//
+// The tests run from the package directory, which is where `novo test`
+// starts them.
+
+use std.fs
+use std.test
+use msggen
+
+fn files_in(dir: Str) -> [Str]
+    var out: [Str] = []
+    if fs.is_dir(dir)
+        for name in fs.read_dir(dir)
+            list.push(out, "${dir}/${name}")
+    out
+
+// The definition files of a package, `msg` and `srv` both.
+fn definitions(pkg: Str) -> [Str]
+    var all: [Str] = []
+    for f in files_in("src/interfaces/${pkg}/msg")
+        list.push(all, f)
+    for f in files_in("src/interfaces/${pkg}/srv")
+        list.push(all, f)
+    all
+
+fn texts_of(files: [Str]) -> [Str]
+    var out: [Str] = []
+    for f in files
+        list.push(out, fs.read(f) ?? "")
+    out
+
+fn job_of(pkg: Str) -> msggen.Job
+    let files = definitions(pkg)
+    var args = ["--package", pkg, "--out", "src/${pkg}.nv",
+                "--tests", "tests/gen_${pkg}_tests.nv"]
+    for f in files
+        list.push(args, f)
+    match msggen.parse_args(args)
+        Ok(j)  => j
+        Err(_) => msggen.Job { pkg: pkg, out: "", opt: msggen.default_options(), files: [], tests_out: "" }
+
+fn check(pkg: Str) [io, fs]
+    let job = job_of(pkg)
+    test.assert(list.len(job.files) > 0)
+    let texts = texts_of(job.files)
+    match msggen.build_module(job, texts)
+        Ok(text) => test.assert_eq_str(text, fs.read(job.out) ?? "")
+        Err(e)   => test.fail("${pkg}: ${e}")
+    match msggen.build_tests(job, texts)
+        Ok(text) => test.assert_eq_str(text, fs.read(job.tests_out) ?? "")
+        Err(e)   => test.fail("${pkg}: ${e}")
+
+@test
+fn test_builtin_interfaces_current() [io, fs]
+    check("builtin_interfaces")
+
+@test
+fn test_std_msgs_current() [io, fs]
+    check("std_msgs")
+
+@test
+fn test_geometry_msgs_current() [io, fs]
+    check("geometry_msgs")
+
+@test
+fn test_sensor_msgs_current() [io, fs]
+    check("sensor_msgs")
+
+@test
+fn test_rcl_interfaces_current() [io, fs]
+    check("rcl_interfaces")
+
+@test
+fn test_example_interfaces_current() [io, fs]
+    check("example_interfaces")
+
+@test
+fn test_std_srvs_current() [io, fs]
+    check("std_srvs")
+
+@test
+fn test_cdr_test_msgs_current() [io, fs]
+    check("cdr_test_msgs")
+
+// The program entry: the arguments in, two files out, status 0; and each
+// way it stops.
+@test
+fn test_run() [io, fs]
+    let dir = definitions("builtin_interfaces")
+    var args = ["--package", "builtin_interfaces", "--out", "_novo/run_test.out",
+                "--tests", "_novo/run_test_tests.out"]
+    for f in dir
+        list.push(args, f)
+    test.assert_eq(msggen.run(args), 0)
+    test.assert_eq_str(fs.read("_novo/run_test.out") ?? "x", fs.read("src/builtin_interfaces.nv") ?? "y")
+    test.assert_eq_str(fs.read("_novo/run_test_tests.out") ?? "x",
+                       fs.read("tests/gen_builtin_interfaces_tests.nv") ?? "y")
+    // Without --tests only the module is written.
+    var args2 = ["--package", "builtin_interfaces", "--out", "_novo/run_test2.out"]
+    for f in dir
+        list.push(args2, f)
+    test.assert_eq(msggen.run(args2), 0)
+    // Bad arguments, a missing file, a bad definition, unwritable outputs.
+    test.assert_eq(msggen.run([]), 1)
+    test.assert_eq(msggen.run(["--package", "p", "--out", "_novo/x.out", "_novo/no_such_file.msg"]), 1)
+    test.assert(fs.write("_novo/Bad.msg", "int32\n"))
+    test.assert_eq(msggen.run(["--package", "p", "--out", "_novo/x.out", "_novo/Bad.msg"]), 1)
+    test.assert(fs.write("_novo/Good.msg", "int32 a\n"))
+    test.assert_eq(msggen.run(["--package", "p", "--out", "_novo/no_dir/x.nv", "_novo/Good.msg"]), 1)
+    test.assert_eq(msggen.run(["--package", "p", "--out", "_novo/x.out",
+                               "--tests", "_novo/no_dir/t.nv", "_novo/Good.msg"]),
+                               1)
+    test.assert_eq(msggen.run(["--package", "p", "--out", "_novo/x.out",
+                               "--tests", "_novo/x_tests.out", "_novo/Good.msg"]),
+                               0)

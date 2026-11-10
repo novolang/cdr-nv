@@ -55,8 +55,8 @@ pub const CDR_CAP = 1024
 pub const HEADER_LEN = 4
 
 // What a call found, or the first thing it found wrong.
-@value
-pub enum Status
+pub @value
+enum Status
     // Nothing has gone wrong yet.
     Success
     // The writer's buffer is full: the message does not fit `CDR_CAP`.
@@ -82,6 +82,13 @@ pub fn status_name(s: Status) -> Str
         BadString => "bad string"
         BadHeader => "bad header"
         BadValue  => "bad value"
+
+// The standard `Error` implementation, so a status can be the error of a
+// `Result` in a program that has the heap for one.
+impl Error for Status
+    // The short name of the status.
+    fn message(self) -> Str
+        status_name(self)
 
 // The 32-bit IEEE 754 pattern of a float, rounded to nearest even.
 //
@@ -114,7 +121,7 @@ fn f32_from_bits(b: Int) -> fp32
     if e == 0xFF
         wide = float.from_bits((sign << 63) | (0x7FF << 52) | (m << 29))
     else if e == 0
-        let tiny = (m as Float) * 1.401298464324817e-45
+        let tiny = m as Float * 1.401298464324817e-45
         wide = float.from_bits(float.to_bits(tiny) | (sign << 63))
     else
         wide = float.from_bits((sign << 63) | ((e - 127 + 1023) << 52) | (m << 29))
@@ -130,8 +137,8 @@ fn pad_for(off: Int, n: Int) -> Int
 // The bytes are inline, so a `Writer` is a value on the caller's
 // stack.  Declare it `var`, build it with `writer_le` or `writer_be`,
 // and hand it to a message's `encode` as `var w`.
-@value
-pub struct Writer
+pub @value
+struct Writer
     buf: Vec[u8; CDR_CAP]
     le: Bool
     status: Status
@@ -172,9 +179,12 @@ impl Writer
         match self.status
             Success =>
                 match self.buf.push(b)
-                    Ok(_)  => self.status = Status.Success
-                    Err(_) => self.status = Status.Full
-            _ => self.status = self.status
+                    Ok(_)  =>
+                        self.status = Status.Success
+                    Err(_) =>
+                        self.status = Status.Full
+            _       =>
+                self.status = self.status
 
     // Pad with zero bytes until the next byte lands on a multiple of
     // `n`, counting from the first byte after the header.
@@ -189,7 +199,10 @@ impl Writer
     fn put_uint(var self, x: Int, size: Int)
         self.align(size)
         for i in 0..size
-            let shift = if self.le then 8 * i else 8 * (size - 1 - i)
+            let shift = if self.le
+                8 * i
+            else
+                8 * (size - 1 - i)
             self.put_raw(((x >>> shift) & 0xFF) as u8)
 
     // A `bool` is one byte, 0 or 1.
@@ -276,8 +289,8 @@ impl Writer
 // Like the `Writer`, the bytes are inline.  A reader is built from a
 // copy of the message, so the caller's buffer may be reused as soon as
 // `reader_from` has returned.
-@value
-pub struct Reader
+pub @value
+struct Reader
     buf: Vec[u8; CDR_CAP]
     pos: Int
     le: Bool
@@ -309,11 +322,11 @@ impl Reader
     fn read_header(var self)
         if self.buf.len() < HEADER_LEN
             self.status = Status.Truncated
-        else if self.buf[0] != 0 as u8
+        else if self.buf[0] != (0 as u8)
             self.status = Status.BadHeader
-        else if self.buf[1] == 1 as u8
+        else if self.buf[1] == (1 as u8)
             self.le = true
-        else if self.buf[1] == 0 as u8
+        else if self.buf[1] == (0 as u8)
             self.le = false
         else
             self.status = Status.BadHeader
@@ -321,8 +334,10 @@ impl Reader
     // The first failure, kept.
     fn fail(var self, s: Status)
         match self.status
-            Success => self.status = s
-            _       => self.status = self.status
+            Success =>
+                self.status = s
+            _       =>
+                self.status = self.status
 
     // One byte, or zero with `Truncated` when the bytes have run out.
     fn get_raw(var self) -> u8
@@ -335,7 +350,7 @@ impl Reader
                     let b = self.buf[self.pos]
                     self.pos = self.pos + 1
                     b
-            _ => 0 as u8
+            _       => 0 as u8
 
     // Skip padding until the next byte is at a multiple of `n` from
     // the first byte after the header.  The padding bytes are not
@@ -354,7 +369,10 @@ impl Reader
         var x = 0
         for i in 0..size
             let b = self.get_raw() as Int
-            let shift = if self.le then 8 * i else 8 * (size - 1 - i)
+            let shift = if self.le
+                8 * i
+            else
+                8 * (size - 1 - i)
             x = x | (b << shift)
         x
 
@@ -434,7 +452,7 @@ impl Reader
 
     // The NUL that closes a string.  Anything else is `BadString`.
     fn end_string(var self)
-        if self.get_raw() != 0 as u8
+        if self.get_raw() != (0 as u8)
             self.fail(Status.BadString)
 
     // The bytes not yet read.

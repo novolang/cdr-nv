@@ -11,7 +11,7 @@ use std.bytes
 use std.test
 use cdr
 use cdrbytes
-use interfaces.example_interfaces
+use example_interfaces
 
 fn writer(le: Bool) -> cdr.Writer
     if le
@@ -29,8 +29,10 @@ fn reader_of(w: cdr.Writer, cut: Int) -> cdr.Reader
 @test
 fn test_example_interfaces_AddTwoInts_Request() [io]
     let m = example_interfaces.AddTwoIntsRequest.sample()
-    test.assert_eq_str(example_interfaces.AddTwoIntsRequest.type_name(), "example_interfaces/srv/AddTwoInts_Request")
-    test.assert_eq_str(example_interfaces.AddTwoIntsRequest.dds_type_name(), "example_interfaces::srv::dds_::AddTwoInts_Request_")
+    let tn = example_interfaces.AddTwoIntsRequest.type_name()
+    test.assert_eq_str(tn, "example_interfaces/srv/AddTwoInts_Request")
+    let dn = example_interfaces.AddTwoIntsRequest.dds_type_name()
+    test.assert_eq_str(dn, "example_interfaces::srv::dds_::AddTwoInts_Request_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -47,7 +49,7 @@ fn test_example_interfaces_AddTwoInts_Request() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match example_interfaces.AddTwoIntsRequest.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -56,8 +58,10 @@ fn test_example_interfaces_AddTwoInts_Request() [io]
 @test
 fn test_example_interfaces_AddTwoInts_Response() [io]
     let m = example_interfaces.AddTwoIntsResponse.sample()
-    test.assert_eq_str(example_interfaces.AddTwoIntsResponse.type_name(), "example_interfaces/srv/AddTwoInts_Response")
-    test.assert_eq_str(example_interfaces.AddTwoIntsResponse.dds_type_name(), "example_interfaces::srv::dds_::AddTwoInts_Response_")
+    let tn = example_interfaces.AddTwoIntsResponse.type_name()
+    test.assert_eq_str(tn, "example_interfaces/srv/AddTwoInts_Response")
+    let dn = example_interfaces.AddTwoIntsResponse.dds_type_name()
+    test.assert_eq_str(dn, "example_interfaces::srv::dds_::AddTwoInts_Response_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -74,7 +78,7 @@ fn test_example_interfaces_AddTwoInts_Response() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match example_interfaces.AddTwoIntsResponse.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")

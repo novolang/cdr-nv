@@ -11,7 +11,7 @@ use std.bytes
 use std.test
 use cdr
 use cdrbytes
-use interfaces.rcl_interfaces
+use rcl_interfaces
 
 fn writer(le: Bool) -> cdr.Writer
     if le
@@ -29,8 +29,10 @@ fn reader_of(w: cdr.Writer, cut: Int) -> cdr.Reader
 @test
 fn test_rcl_interfaces_FloatingPointRange() [io]
     let m = rcl_interfaces.FloatingPointRange.sample()
-    test.assert_eq_str(rcl_interfaces.FloatingPointRange.type_name(), "rcl_interfaces/msg/FloatingPointRange")
-    test.assert_eq_str(rcl_interfaces.FloatingPointRange.dds_type_name(), "rcl_interfaces::msg::dds_::FloatingPointRange_")
+    let tn = rcl_interfaces.FloatingPointRange.type_name()
+    test.assert_eq_str(tn, "rcl_interfaces/msg/FloatingPointRange")
+    let dn = rcl_interfaces.FloatingPointRange.dds_type_name()
+    test.assert_eq_str(dn, "rcl_interfaces::msg::dds_::FloatingPointRange_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -47,7 +49,7 @@ fn test_rcl_interfaces_FloatingPointRange() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match rcl_interfaces.FloatingPointRange.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -56,8 +58,10 @@ fn test_rcl_interfaces_FloatingPointRange() [io]
 @test
 fn test_rcl_interfaces_IntegerRange() [io]
     let m = rcl_interfaces.IntegerRange.sample()
-    test.assert_eq_str(rcl_interfaces.IntegerRange.type_name(), "rcl_interfaces/msg/IntegerRange")
-    test.assert_eq_str(rcl_interfaces.IntegerRange.dds_type_name(), "rcl_interfaces::msg::dds_::IntegerRange_")
+    let tn = rcl_interfaces.IntegerRange.type_name()
+    test.assert_eq_str(tn, "rcl_interfaces/msg/IntegerRange")
+    let dn = rcl_interfaces.IntegerRange.dds_type_name()
+    test.assert_eq_str(dn, "rcl_interfaces::msg::dds_::IntegerRange_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -74,7 +78,7 @@ fn test_rcl_interfaces_IntegerRange() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match rcl_interfaces.IntegerRange.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -83,8 +87,10 @@ fn test_rcl_interfaces_IntegerRange() [io]
 @test
 fn test_rcl_interfaces_ParameterDescriptor() [io]
     let m = rcl_interfaces.ParameterDescriptor.sample()
-    test.assert_eq_str(rcl_interfaces.ParameterDescriptor.type_name(), "rcl_interfaces/msg/ParameterDescriptor")
-    test.assert_eq_str(rcl_interfaces.ParameterDescriptor.dds_type_name(), "rcl_interfaces::msg::dds_::ParameterDescriptor_")
+    let tn = rcl_interfaces.ParameterDescriptor.type_name()
+    test.assert_eq_str(tn, "rcl_interfaces/msg/ParameterDescriptor")
+    let dn = rcl_interfaces.ParameterDescriptor.dds_type_name()
+    test.assert_eq_str(dn, "rcl_interfaces::msg::dds_::ParameterDescriptor_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -101,7 +107,7 @@ fn test_rcl_interfaces_ParameterDescriptor() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match rcl_interfaces.ParameterDescriptor.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -110,8 +116,10 @@ fn test_rcl_interfaces_ParameterDescriptor() [io]
 @test
 fn test_rcl_interfaces_ParameterType() [io]
     let m = rcl_interfaces.ParameterType.sample()
-    test.assert_eq_str(rcl_interfaces.ParameterType.type_name(), "rcl_interfaces/msg/ParameterType")
-    test.assert_eq_str(rcl_interfaces.ParameterType.dds_type_name(), "rcl_interfaces::msg::dds_::ParameterType_")
+    let tn = rcl_interfaces.ParameterType.type_name()
+    test.assert_eq_str(tn, "rcl_interfaces/msg/ParameterType")
+    let dn = rcl_interfaces.ParameterType.dds_type_name()
+    test.assert_eq_str(dn, "rcl_interfaces::msg::dds_::ParameterType_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -128,7 +136,7 @@ fn test_rcl_interfaces_ParameterType() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match rcl_interfaces.ParameterType.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -137,8 +145,10 @@ fn test_rcl_interfaces_ParameterType() [io]
 @test
 fn test_rcl_interfaces_ParameterValue() [io]
     let m = rcl_interfaces.ParameterValue.sample()
-    test.assert_eq_str(rcl_interfaces.ParameterValue.type_name(), "rcl_interfaces/msg/ParameterValue")
-    test.assert_eq_str(rcl_interfaces.ParameterValue.dds_type_name(), "rcl_interfaces::msg::dds_::ParameterValue_")
+    let tn = rcl_interfaces.ParameterValue.type_name()
+    test.assert_eq_str(tn, "rcl_interfaces/msg/ParameterValue")
+    let dn = rcl_interfaces.ParameterValue.dds_type_name()
+    test.assert_eq_str(dn, "rcl_interfaces::msg::dds_::ParameterValue_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -155,7 +165,7 @@ fn test_rcl_interfaces_ParameterValue() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match rcl_interfaces.ParameterValue.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")

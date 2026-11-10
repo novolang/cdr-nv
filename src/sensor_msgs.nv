@@ -11,14 +11,14 @@
 // holds 16 elements.  A longer one on the wire is reported as TooLong.
 
 use cdr
-use interfaces.std_msgs
-use interfaces.geometry_msgs
+use std_msgs
+use geometry_msgs
 
 // The ROS 2 message `sensor_msgs/msg/Imu`.
 //
 // This is a message to hold data from an IMU (Inertial Measurement Unit)
-@value
-pub struct Imu
+pub @value
+struct Imu
     // header
     header: std_msgs.Header
     // orientation
@@ -52,8 +52,7 @@ impl Imu
             angular_velocity: geometry_msgs.Vector3.new(),
             angular_velocity_covariance: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             linear_acceleration: geometry_msgs.Vector3.new(),
-            linear_acceleration_covariance: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        }
+            linear_acceleration_covariance: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
@@ -65,8 +64,7 @@ impl Imu
             angular_velocity: geometry_msgs.Vector3.sample(),
             angular_velocity_covariance: [5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5],
             linear_acceleration: geometry_msgs.Vector3.sample(),
-            linear_acceleration_covariance: [7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5]
-        }
+            linear_acceleration_covariance: [7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5] }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -126,20 +124,23 @@ pub const NAV_SAT_STATUS_STATUS_SBAS_FIX = 1
 // with ground-based augmentation
 pub const NAV_SAT_STATUS_STATUS_GBAS_FIX = 2
 
+// The constant SERVICE_GPS of the ROS 2 message `sensor_msgs/msg/NavSatStatus`.
 pub const NAV_SAT_STATUS_SERVICE_GPS = 1
 
+// The constant SERVICE_GLONASS of the ROS 2 message `sensor_msgs/msg/NavSatStatus`.
 pub const NAV_SAT_STATUS_SERVICE_GLONASS = 2
 
 // includes BeiDou.
 pub const NAV_SAT_STATUS_SERVICE_COMPASS = 4
 
+// The constant SERVICE_GALILEO of the ROS 2 message `sensor_msgs/msg/NavSatStatus`.
 pub const NAV_SAT_STATUS_SERVICE_GALILEO = 8
 
 // The ROS 2 message `sensor_msgs/msg/NavSatStatus`.
 //
 // Navigation Satellite fix status for any Global Navigation Satellite System.
-@value
-pub struct NavSatStatus
+pub @value
+struct NavSatStatus
     // status
     status: i8
     // service
@@ -158,16 +159,14 @@ impl NavSatStatus
     fn new() -> NavSatStatus
         NavSatStatus {
             status: 0 as i8,
-            service: 0 as u16
-        }
+            service: 0 as u16 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
     fn sample() -> NavSatStatus
         NavSatStatus {
             status: 1 as i8,
-            service: 2 as u16
-        }
+            service: 2 as u16 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)
@@ -202,8 +201,8 @@ impl NavSatStatus
 // The ROS 2 message `sensor_msgs/msg/Temperature`.
 //
 // Single temperature reading.
-@value
-pub struct Temperature
+pub @value
+struct Temperature
     // timestamp is the time the temperature was measured
     header: std_msgs.Header
     // Measurement of the Temperature in Degrees Celsius.
@@ -225,8 +224,7 @@ impl Temperature
         Temperature {
             header: std_msgs.Header.new(),
             temperature: 0.0,
-            variance: 0.0
-        }
+            variance: 0.0 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
     // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
@@ -234,8 +232,7 @@ impl Temperature
         Temperature {
             header: std_msgs.Header.sample(),
             temperature: 2.5,
-            variance: 3.5
-        }
+            variance: 3.5 }
 
     // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
     fn write_to(self, var w: cdr.Writer)

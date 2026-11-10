@@ -1,0 +1,370 @@
+// vectors_tests.nv — messages encoded to the bytes the CDR rules give,
+// and decoded from those bytes.
+//
+// Every expected string below is derived by hand from the rules, and the
+// derivation is written above it.  Nothing here is produced by the code
+// under test and pasted back in.  One vector, the `tf2_msgs/TFMessage`,
+// is not derived but captured; its source is named at that test.
+//
+// THE RULES, ONCE.  A message is a four-byte header and then its fields.
+// The header is `00 01 00 00` for little-endian and `00 00 00 00` for
+// big-endian.  A primitive of size N starts at a payload offset that is a
+// multiple of N, counted from the first byte AFTER the header, and the
+// gap is filled with zero bytes.  A string is a `uint32` that counts the
+// text and its NUL, then the text, then the NUL.  A sequence is a
+// `uint32` count and then its elements.  So "offset" below always means
+// the offset in the payload, and the offset in the stream is that plus 4.
+//
+// The doubles used, as little-endian bytes:
+//   0.0  0000000000000000        0.5  000000000000e03f
+//   1.0  000000000000f03f        2.0  0000000000000040
+//   3.0  0000000000000840       10.0  0000000000002440
+// The floats used: 1.0 0000803f, 2.0 00000040, 3.0 00004040,
+// 0.5 0000003f, -1.0 000080bf.
+
+use std.bytes
+use std.str
+use std.test
+use cdr
+use cdrbytes
+use builtin_interfaces
+use geometry_msgs
+use rcl_interfaces
+use sensor_msgs
+use std_msgs
+
+// A string of the capacity the generated modules give an unbounded one.
+fn s64(t: Str) -> String[64]
+    var s: String[64] = String.new()
+    let _ = s.push_str(t)
+    s
+
+// The writer's bytes as lowercase hex.
+fn hex_of(w: cdr.Writer) -> Str
+    bytes.to_hex(cdrbytes.to_bytes(w))
+
+// A reader over a hex string.
+fn reader_of_hex(h: Str) -> cdr.Reader
+    cdrbytes.reader_from_bytes(bytes.from_hex(h) ?? bytes.zeros(0))
+
+// The same hex string `n` times over.
+fn rep(h: Str, n: Int) -> Str
+    str.repeat(h, n)
+
+// std_msgs/String with data "hello".
+//
+//   header  00 01 00 00
+//   offset 0   length    6 (five letters and the NUL)   06 00 00 00
+//   offset 4   text      h e l l o                      68 65 6c 6c 6f
+//   offset 9   NUL                                      00
+//
+// 14 bytes.  The payload ends at offset 10 and nothing pads it.
+@test
+fn test_string_hello() [io]
+    let m = std_msgs.StringMsg { data: s64("hello") }
+    var w = cdr.writer_le()
+    test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
+    test.assert_eq_str(hex_of(w), "0001000006000000" + "68656c6c6f" + "00")
+    var r = reader_of_hex("00010000060000006865" + "6c6c6f00")
+    match std_msgs.StringMsg.decode(var r)
+        Some(x) => test.assert(x.data.eq_str("hello"))
+        None    => test.fail("String did not decode")
+
+// std_msgs/Int32 with data 0x12345678.
+//
+//   header  00 01 00 00
+//   offset 0   int32     78 56 34 12 little-endian, 12 34 56 78 big-endian
+//
+// Eight bytes either way, and the header's second byte is the only other
+// difference.
+@test
+fn test_int32_both_orders() [io]
+    let m = std_msgs.Int32 { data: 305419896 as i32 }
+    var le = cdr.writer_le()
+    let _ = m.encode(var le)
+    test.assert_eq_str(hex_of(le), "00010000" + "78563412")
+    var be = cdr.writer_be()
+    let _ = m.encode(var be)
+    test.assert_eq_str(hex_of(be), "00000000" + "12345678")
+    var r = reader_of_hex("00000000" + "12345678")
+    match std_msgs.Int32.decode(var r)
+        Some(x) => test.assert_eq(x.data as Int, 305419896)
+        None    => test.fail("big-endian Int32 did not decode")
+    let neg = std_msgs.Int32 { data: -2 as i32 }
+    var wn = cdr.writer_le()
+    let _ = neg.encode(var wn)
+    test.assert_eq_str(hex_of(wn), "00010000" + "feffffff")
+
+// std_msgs/Header with stamp 1 s 2 ns and frame_id "map".
+//
+//   offset 0   stamp.sec        int32    01 00 00 00
+//   offset 4   stamp.nanosec    uint32   02 00 00 00
+//   offset 8   frame_id length  uint32   04 00 00 00   (m a p and the NUL)
+//   offset 12  text and NUL              6d 61 70 00
+//
+// The payload is 16 bytes and the message 20.
+@test
+fn test_header_map() [io]
+    let m = std_msgs.Header { stamp: builtin_interfaces.Time { sec: 1 as i32, nanosec: 2 as u32 },
+                              frame_id: s64("map") }
+    var w = cdr.writer_le()
+    let _ = m.encode(var w)
+    test.assert_eq_str(hex_of(w), "00010000" + "01000000" + "02000000" + "04000000" + "6d617000")
+    var r = reader_of_hex("00010000" + "01000000" + "02000000" + "04000000" + "6d617000")
+    match std_msgs.Header.decode(var r)
+        Some(x) =>
+            test.assert_eq(x.stamp.sec as Int, 1)
+            test.assert_eq(x.stamp.nanosec as Int, 2)
+            test.assert(x.frame_id.eq_str("map"))
+        None    => test.fail("Header did not decode")
+
+// std_msgs/Header with frame_id "base_link": nine letters and the NUL
+// make ten bytes, so the string ends at offset 22, which is not a
+// multiple of anything.  The header is the last field, so nothing pads
+// the end: 26 bytes.
+//
+//   offset 8   length 10    0a 00 00 00
+//   offset 12  text         62 61 73 65 5f 6c 69 6e 6b  (base_link)
+//   offset 21  NUL          00
+@test
+fn test_header_ragged_end() [io]
+    let m = std_msgs.Header { stamp: builtin_interfaces.Time { sec: 1 as i32, nanosec: 2 as u32 },
+                              frame_id: s64("base_link") }
+    var w = cdr.writer_le()
+    let _ = m.encode(var w)
+    test.assert_eq_str(hex_of(w), "00010000" + "01000000" + "02000000" + "0a000000"
+                                 + "626173655f6c696e6b" + "00")
+    test.assert_eq(w.len(), 26)
+
+// geometry_msgs/Twist, linear (1, 2, 3) and angular (0, 0, 0.5).
+//
+// Six float64 values, each 8 bytes.  The first sits at offset 0 and is
+// aligned, because alignment counts from the end of the header: in the
+// stream it is at byte 4, which is NOT a multiple of 8, and that is
+// correct.  48 payload bytes, 52 in all.
+@test
+fn test_twist() [io]
+    let m = geometry_msgs.Twist { linear: geometry_msgs.Vector3 { x: 1.0, y: 2.0, z: 3.0 },
+                                  angular: geometry_msgs.Vector3 { x: 0.0, y: 0.0, z: 0.5 } }
+    var w = cdr.writer_le()
+    let _ = m.encode(var w)
+    let want = "00010000" + "000000000000f03f" + "0000000000000040" + "0000000000000840"
+               + "0000000000000000" + "0000000000000000" + "000000000000e03f"
+    test.assert_eq_str(hex_of(w), want)
+    test.assert_eq(w.len(), 52)
+    var r = reader_of_hex(want)
+    match geometry_msgs.Twist.decode(var r)
+        Some(x) =>
+            test.assert_approx(x.linear.z, 3.0, 0.0)
+            test.assert_approx(x.angular.z, 0.5, 0.0)
+        None    => test.fail("Twist did not decode")
+
+// sensor_msgs/Imu with frame_id "imu_link", orientation (0, 0, 0, 1), and
+// every other number zero.  The layout:
+//
+//   offset 0    header.stamp         8 bytes           sec 1, nanosec 0
+//   offset 8    frame_id length      4                 09 00 00 00
+//   offset 12   "imu_link" and NUL   9                 ends at 21
+//   offset 21   padding              3 zero bytes      the next double is
+//   offset 24   orientation x, y, z, w                 32 bytes, w = 1.0
+//   offset 56   orientation_covariance                 9 doubles = 72
+//   offset 128  angular_velocity                       24
+//   offset 152  angular_velocity_covariance            72
+//   offset 224  linear_acceleration                    24
+//   offset 248  linear_acceleration_covariance         72
+//   offset 320  end
+//
+// 324 bytes in all.  The three padding bytes are the point of this
+// vector: a string of a length that is not a multiple of 8 pushes every
+// double after it off its boundary and the writer has to pad back.
+@test
+fn test_imu_after_a_string() [io]
+    let zero3 = geometry_msgs.Vector3 { x: 0.0, y: 0.0, z: 0.0 }
+    let z9 = sensor_msgs.Imu.new().orientation_covariance
+    let m = sensor_msgs.Imu {
+        header: std_msgs.Header { stamp: builtin_interfaces.Time { sec: 1 as i32, nanosec: 0 as u32 },
+                                  frame_id: s64("imu_link") },
+        orientation: geometry_msgs.Quaternion { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
+        orientation_covariance: z9,
+        angular_velocity: zero3,
+        angular_velocity_covariance: z9,
+        linear_acceleration: zero3,
+        linear_acceleration_covariance: z9 }
+    var w = cdr.writer_le()
+    test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
+    let zero8 = "0000000000000000"
+    let want = "00010000" + "01000000" + "00000000" + "09000000" + "696d755f6c696e6b" + "00"
+               + "000000"
+               + rep(zero8, 3) + "000000000000f03f"
+               + rep(zero8, 9)
+               + rep(zero8, 3) + rep(zero8, 9)
+               + rep(zero8, 3) + rep(zero8, 9)
+    test.assert_eq_str(hex_of(w), want)
+    test.assert_eq(w.len(), 324)
+    var r = reader_of_hex(want)
+    match sensor_msgs.Imu.decode(var r)
+        Some(x) =>
+            test.assert_approx(x.orientation.w, 1.0, 0.0)
+            test.assert(x.header.frame_id.eq_str("imu_link"))
+        None    => test.fail("Imu did not decode")
+
+// rcl_interfaces/ParameterDescriptor, which has a bounded sequence of
+// at most one FloatingPointRange.  The message: name "p", type 3,
+// descriptions empty, read_only false, dynamic_typing false, one range
+// from 0.0 to 10.0 in steps of 0.5, and no integer range.
+//
+//   offset 0    name length 2             02 00 00 00
+//   offset 4    "p" and NUL               70 00
+//   offset 6    type uint8                03
+//   offset 7    padding 1                 00
+//   offset 8    description length 1      01 00 00 00
+//   offset 12   NUL                       00
+//   offset 13   padding 3                 00 00 00
+//   offset 16   additional_constraints    01 00 00 00
+//   offset 20   NUL                       00
+//   offset 21   read_only                 00
+//   offset 22   dynamic_typing            00
+//   offset 23   padding 1                 00
+//   offset 24   range count               01 00 00 00     (bounded, 1 of at most 1)
+//   offset 28   padding 4                 00 00 00 00     (the double is aligned to 8)
+//   offset 32   from_value 0.0, to_value 10.0, step 0.5   24 bytes
+//   offset 56   integer_range count       00 00 00 00
+//   offset 60   end
+//
+// 64 bytes in all.
+@test
+fn test_bounded_sequence() [io]
+    var ranges: Vec[FloatingPointRange; 1] = Vec.new()
+    let _ = ranges.push(rcl_interfaces.FloatingPointRange { from_value: 0.0, to_value: 10.0, step: 0.5 })
+    let m = rcl_interfaces.ParameterDescriptor {
+        name: s64("p"),
+        type_: 3 as u8,
+        description: s64(""),
+        additional_constraints: s64(""),
+        read_only: false,
+        dynamic_typing: false,
+        floating_point_range: ranges,
+        integer_range: Vec.new() }
+    var w = cdr.writer_le()
+    test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
+    let want = "00010000" + "02000000" + "7000" + "03" + "00"
+               + "01000000" + "00" + "000000"
+               + "01000000" + "00" + "00" + "00" + "00"
+               + "01000000" + "00000000"
+               + "0000000000000000" + "0000000000002440" + "000000000000e03f"
+               + "00000000"
+    test.assert_eq_str(hex_of(w), want)
+    test.assert_eq(w.len(), 64)
+    var r = reader_of_hex(want)
+    match rcl_interfaces.ParameterDescriptor.decode(var r)
+        Some(x) =>
+            test.assert_eq(x.floating_point_range.len(), 1)
+            test.assert_approx(x.floating_point_range[0].to_value, 10.0, 0.0)
+            test.assert_eq(x.integer_range.len(), 0)
+        None    => test.fail("ParameterDescriptor did not decode")
+    // A count above the bound is refused and never truncated.  The same
+    // bytes with the range count changed to 2 do not fit a sequence of 1.
+    var r2 = reader_of_hex("00010000" + "02000000" + "7000" + "03" + "00" + "01000000" + "00" + "000000"
+                           + "01000000" + "00" + "00" + "00" + "00" + "02000000")
+    match rcl_interfaces.ParameterDescriptor.decode(var r2)
+        Some(_) => test.fail("a count above the bound decoded")
+        None    => test.assert_eq_str(cdr.status_name(r2.result()), "too long")
+
+// geometry_msgs/Polygon, a sequence of nested messages: two Point32, each
+// three float32 values.
+//
+//   offset 0    count 2                 02 00 00 00
+//   offset 4    point 0: x 1.0, y 2.0, z 3.0   0000803f 00000040 00004040
+//   offset 16   point 1: x 0.5, y -1.0, z 0.0  0000003f 000080bf 00000000
+//   offset 28   end
+//
+// 32 bytes.  Floats are 4-aligned, so no padding at all.
+@test
+fn test_nested_sequence_of_floats() [io]
+    var pts: Vec[Point32; 16] = Vec.new()
+    let _ = pts.push(geometry_msgs.Point32 { x: 1.0 as fp32, y: 2.0 as fp32, z: 3.0 as fp32 })
+    let _ = pts.push(geometry_msgs.Point32 { x: 0.5 as fp32, y: -1.0 as fp32, z: 0.0 as fp32 })
+    let m = geometry_msgs.Polygon { points: pts }
+    var w = cdr.writer_le()
+    let _ = m.encode(var w)
+    let want = "00010000" + "02000000" + "0000803f" + "00000040" + "00004040"
+               + "0000003f" + "000080bf" + "00000000"
+    test.assert_eq_str(hex_of(w), want)
+    test.assert_eq(w.len(), 32)
+
+// geometry_msgs/PoseWithCovariance, a nested message followed by a fixed
+// array of 36 doubles with no count.
+//
+//   offset 0    pose: position (3 doubles), orientation (4 doubles)   56
+//   offset 56   covariance: 36 doubles                                 288
+//   offset 344  end
+//
+// 348 bytes.  A fixed array writes no count, so the first covariance
+// double follows the pose directly.
+@test
+fn test_fixed_array_after_nested() [io]
+    let m = geometry_msgs.PoseWithCovariance.sample()
+    var w = cdr.writer_le()
+    let _ = m.encode(var w)
+    test.assert_eq(w.len(), 348)
+    var r = cdrbytes.reader_from_bytes(cdrbytes.to_bytes(w))
+    match geometry_msgs.PoseWithCovariance.decode(var r)
+        Some(x) => test.assert_approx(x.covariance[35], m.covariance[35], 0.0)
+        None    => test.fail("PoseWithCovariance did not decode")
+
+// A captured message: tf2_msgs/TFMessage carrying one TransformStamped.
+//
+// SOURCE.  The bytes are the constant `tf2_msg__TFMessage` in the test
+// file `src/CdrWriter.test.ts` of the foxglove/cdr repository
+// (https://github.com/foxglove/cdr), a CDR library that reads and writes
+// the messages in ROS 2 bags.  They were read from that file on
+// 2026-11-10 and are the encoding of a transform from "base_link" to
+// "radar" at the time 1490149580 s 117017840 ns, with a translation of
+// (3.835, 0, 0) and no rotation.  The ROS 2 definition of the message is
+// `geometry_msgs/TransformStamped[] transforms`, so the payload is the
+// sequence count 1 and then one TransformStamped.
+//
+//   offset 0    count 1                       01 00 00 00
+//   offset 4    stamp.sec 1490149580          cc e0 d1 58
+//   offset 8    stamp.nanosec 117017840       f0 8c f9 06
+//   offset 12   frame_id length 10            0a 00 00 00
+//   offset 16   "base_link" and NUL           62 61 73 65 5f 6c 69 6e 6b 00
+//   offset 26   padding 2                     00 00
+//   offset 28   child_frame_id length 6       06 00 00 00
+//   offset 32   "radar" and NUL               72 61 64 61 72 00
+//   offset 38   padding 2                     00 00
+//   offset 40   translation x 3.835           ae 47 e1 7a 14 ae 0e 40
+//   offset 48   translation y, z, rotation x, y, z    five zero doubles
+//   offset 88   rotation w 1.0                00 00 00 00 00 00 f0 3f
+//   offset 96   end
+//
+// The TFMessage type is not one of the bundled sets, so the count is
+// written with `put_count` and the element with the generated
+// TransformStamped, which is what the generated TFMessage would do.
+@test
+fn test_captured_tf_message() [io]
+    let captured = "0001000001000000cce0d158f08cf9060a000000626173655f6c696e6b000000"
+                   + "060000007261646172000000ae47e17a14ae0e40" + rep("0000000000000000", 5)
+                   + "000000000000f03f"
+    let m = geometry_msgs.TransformStamped {
+        header: std_msgs.Header { stamp: builtin_interfaces.Time { sec: 1490149580 as i32,
+                                                                  nanosec: 117017840 as u32 },
+                                  frame_id: s64("base_link") },
+        child_frame_id: s64("radar"),
+        transform: geometry_msgs.Transform {
+            translation: geometry_msgs.Vector3 { x: 3.835, y: 0.0, z: 0.0 },
+            rotation: geometry_msgs.Quaternion { x: 0.0, y: 0.0, z: 0.0, w: 1.0 } } }
+    var w = cdr.writer_le()
+    w.put_count(1)
+    m.write_to(var w)
+    test.assert_eq_str(cdr.status_name(w.result()), "success")
+    test.assert_eq_str(hex_of(w), captured)
+    var r = reader_of_hex(captured)
+    test.assert_eq(r.get_count(1), 1)
+    var back = geometry_msgs.TransformStamped.new()
+    back.read_from(var r)
+    test.assert_eq_str(cdr.status_name(r.result()), "success")
+    test.assert_eq(r.remaining(), 0)
+    test.assert_eq(back.header.stamp.sec as Int, 1490149580)
+    test.assert(back.child_frame_id.eq_str("radar"))
+    test.assert_approx(back.transform.translation.x, 3.835, 0.0)

@@ -11,7 +11,7 @@ use std.bytes
 use std.test
 use cdr
 use cdrbytes
-use interfaces.sensor_msgs
+use sensor_msgs
 
 fn writer(le: Bool) -> cdr.Writer
     if le
@@ -29,8 +29,10 @@ fn reader_of(w: cdr.Writer, cut: Int) -> cdr.Reader
 @test
 fn test_sensor_msgs_Imu() [io]
     let m = sensor_msgs.Imu.sample()
-    test.assert_eq_str(sensor_msgs.Imu.type_name(), "sensor_msgs/msg/Imu")
-    test.assert_eq_str(sensor_msgs.Imu.dds_type_name(), "sensor_msgs::msg::dds_::Imu_")
+    let tn = sensor_msgs.Imu.type_name()
+    test.assert_eq_str(tn, "sensor_msgs/msg/Imu")
+    let dn = sensor_msgs.Imu.dds_type_name()
+    test.assert_eq_str(dn, "sensor_msgs::msg::dds_::Imu_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -47,7 +49,7 @@ fn test_sensor_msgs_Imu() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match sensor_msgs.Imu.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -56,8 +58,10 @@ fn test_sensor_msgs_Imu() [io]
 @test
 fn test_sensor_msgs_NavSatStatus() [io]
     let m = sensor_msgs.NavSatStatus.sample()
-    test.assert_eq_str(sensor_msgs.NavSatStatus.type_name(), "sensor_msgs/msg/NavSatStatus")
-    test.assert_eq_str(sensor_msgs.NavSatStatus.dds_type_name(), "sensor_msgs::msg::dds_::NavSatStatus_")
+    let tn = sensor_msgs.NavSatStatus.type_name()
+    test.assert_eq_str(tn, "sensor_msgs/msg/NavSatStatus")
+    let dn = sensor_msgs.NavSatStatus.dds_type_name()
+    test.assert_eq_str(dn, "sensor_msgs::msg::dds_::NavSatStatus_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -74,7 +78,7 @@ fn test_sensor_msgs_NavSatStatus() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match sensor_msgs.NavSatStatus.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")
@@ -83,8 +87,10 @@ fn test_sensor_msgs_NavSatStatus() [io]
 @test
 fn test_sensor_msgs_Temperature() [io]
     let m = sensor_msgs.Temperature.sample()
-    test.assert_eq_str(sensor_msgs.Temperature.type_name(), "sensor_msgs/msg/Temperature")
-    test.assert_eq_str(sensor_msgs.Temperature.dds_type_name(), "sensor_msgs::msg::dds_::Temperature_")
+    let tn = sensor_msgs.Temperature.type_name()
+    test.assert_eq_str(tn, "sensor_msgs/msg/Temperature")
+    let dn = sensor_msgs.Temperature.dds_type_name()
+    test.assert_eq_str(dn, "sensor_msgs::msg::dds_::Temperature_")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -101,7 +107,7 @@ fn test_sensor_msgs_Temperature() [io]
                 var w3 = writer(le)
                 let _ = x.encode(var w3)
                 test.assert_eq_str(hex_of(w3), hex_of(w))
-            None => test.fail("a whole message did not decode")
+            None    => test.fail("a whole message did not decode")
         var r3 = reader_of(w, 1)
         match sensor_msgs.Temperature.decode(var r3)
             Some(_) => test.fail("a truncated message decoded")

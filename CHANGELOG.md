@@ -1,0 +1,55 @@
+# Changelog
+
+All notable changes to cdr-nv are recorded here. The format is
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
+package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+with the pre-1.0 rule that a breaking change bumps the MINOR number.
+
+## 0.1.0 — 2026-11-10
+
+The first release.
+
+### Added
+
+- `cdr`: Common Data Representation version 1 as ROS 2 messages travel in
+  it. A `Writer` and a `Reader` over fixed-capacity buffers (`CDR_CAP`, 1,024
+  bytes, the header included) that allocate nothing; little-endian and
+  big-endian headers; `bool`, the integer widths, `float32` and `float64`,
+  strings, sequence counts and the alignment of each, counted from the end of
+  the header. A failure is recorded in a sticky `Status` and the first one is
+  the one reported.
+- `cdrbytes`: the writer's bytes as a `Bytes`, and a reader over a `Bytes`.
+  A host module.
+- `msggen`: a parser for `.msg` and `.srv` definitions (primitives, bounded
+  strings, fixed, bounded and unbounded arrays, nested messages, constants
+  and defaults) and a generator that writes one module per ROS package, with
+  a struct per message that has `new`, `sample`, `encode`, `decode`,
+  `decode_into` and the ROS 2 and DDS type names. A host module, with a
+  program in `examples/msggen_cli.nv`.
+- The bundled sets in `src/interfaces/`: `builtin_interfaces`, `std_msgs`,
+  `geometry_msgs`, a subset of `sensor_msgs` and `rcl_interfaces`,
+  `example_interfaces`'s `AddTwoInts`, and `std_srvs`, each with its
+  definitions beside it. The definitions were written from the Jazzy
+  documentation and not compared with a distribution.
+- `tests/embedded_probe.nv`: a firmware program that builds for the
+  `nrf52-qemu` board with its checks under `@no_alloc`.
+- Test vectors derived by hand, and one captured vector, a
+  `tf2_msgs/TFMessage` from the foxglove/cdr repository's tests.
+
+### Named as decided
+
+**`decode` answers an optional value, not a `Result`.** A `Result` that
+carries a value is a heap cell at the embedded tier, so a message's `decode`
+answers `?T` and the reader's `result()` says why it is `None`.
+`decode_into` answers the status.
+
+**The type hash is not generated.** It is a SHA-256 over a canonical JSON
+description of the message and every type in it, and it has not been
+compared with a ROS 2 installation.
+
+**A struct named for a type the language has takes `Msg` after its name**,
+because the compiler refuses a struct with the name of a standard-library
+type (E2000), and a struct named `Bool` or `String` also changes what the
+type means in every other module of the program.
+
+This release requires novo 0.23.0 or later.

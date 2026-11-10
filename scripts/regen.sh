@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# scripts/regen.sh — write src/interfaces/<package>.nv again from the
-# definitions beside it.
+# scripts/regen.sh — write src/<package>.nv again from the
+# definitions beside it (the .msg and .srv files under src/interfaces/).
 #
 #   bash scripts/regen.sh            # every bundled package
 #   bash scripts/regen.sh std_msgs   # one
@@ -9,6 +9,11 @@
 # src/interfaces/<package>/.  msggen orders them by file name itself,
 # and writes the package's round-trip tests, tests/gen_<package>_tests.nv,
 # beside the module.
+#
+# `cdr_test_msgs` is not a ROS package.  It is a fixture: one message with
+# a field of every primitive, one with every shape a field can take, and
+# an empty one, so that the generator's output for the rare shapes is
+# compiled and round-tripped like the rest.
 # `tests/interfaces_current_tests.nv` asserts that what this writes is
 # what is committed, so a change to msggen or to a definition that is
 # not followed by this script fails the suite.
@@ -20,14 +25,15 @@
 set -eu
 cd "$(dirname "$0")/.."
 NOVO="${NOVO:-novo}"
-pkgs="${*:-builtin_interfaces std_msgs geometry_msgs sensor_msgs rcl_interfaces example_interfaces std_srvs}"
+pkgs="${*:-builtin_interfaces std_msgs geometry_msgs sensor_msgs rcl_interfaces example_interfaces std_srvs cdr_test_msgs}"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-cp src/main.nv src/msggen.nv src/cdr.nv "$work"/
+cp examples/msggen_cli.nv "$work"/main.nv
+cp src/msggen.nv src/cdr.nv "$work"/
 (cd "$work" && "$NOVO" build main.nv -o "$work/msggen" >/dev/null)
 for pkg in $pkgs; do
   files=$(ls src/interfaces/"$pkg"/*/*.msg src/interfaces/"$pkg"/*/*.srv 2>/dev/null || true)
   # shellcheck disable=SC2086
-  "$work/msggen" --package "$pkg" --out "src/interfaces/$pkg.nv" --tests "tests/gen_${pkg}_tests.nv" $files
-  echo "src/interfaces/$pkg.nv tests/gen_${pkg}_tests.nv"
+  "$work/msggen" --package "$pkg" --out "src/$pkg.nv" --tests "tests/gen_${pkg}_tests.nv" $files
+  echo "src/$pkg.nv tests/gen_${pkg}_tests.nv"
 done

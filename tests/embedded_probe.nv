@@ -28,9 +28,9 @@
 // holds its message in a `Writer` and its input in a `Reader`.
 
 use cdr
-use interfaces.geometry_msgs
-use interfaces.sensor_msgs
-use interfaces.std_msgs
+use geometry_msgs
+use sensor_msgs
+use std_msgs
 
 // A velocity command written and read back in both byte orders.
 @tier(embedded)
@@ -43,7 +43,7 @@ fn twist_checks() -> Int
     // Four bytes of header and six float64 values.
     if w.len() == 52
         n = n + 1
-    if w.byte(0) == 0 as u8 and w.byte(1) == 1 as u8
+    if w.byte(0) == (0 as u8) and w.byte(1) == (1 as u8)
         n = n + 1
     if st == cdr.Status.Success
         n = n + 1
@@ -58,14 +58,15 @@ fn twist_checks() -> Int
     // byte and every multi-byte value.
     var wb: cdr.Writer = cdr.writer_be()
     let sb: cdr.Status = t.encode(var wb)
-    if sb == cdr.Status.Success and wb.byte(1) == 0 as u8 and wb.len() == 52
+    if sb == cdr.Status.Success and wb.byte(1) == (0 as u8) and wb.len() == 52
         n = n + 1
     var rb: cdr.Reader = cdr.reader_from(wb.buf)
     match geometry_msgs.Twist.decode(var rb)
         Some(x) =>
             if x.linear.y == t.linear.y
                 n = n + 1
-        None => n = n + 0
+        None    =>
+            n = n + 0
     n
 
 // A header, which holds a string, and an `Imu`, which holds nine-element
@@ -84,7 +85,8 @@ fn header_imu_checks() -> Int
         Some(x) =>
             if x.frame_id.len() == h.frame_id.len() and x.stamp.sec == h.stamp.sec
                 n = n + 1
-        None => n = n + 0
+        None    =>
+            n = n + 0
     let imu: sensor_msgs.Imu = sensor_msgs.Imu.sample()
     var wi: cdr.Writer = cdr.writer_le()
     let si: cdr.Status = imu.encode(var wi)
@@ -110,7 +112,7 @@ fn refusal_checks() -> Int
     var r: cdr.Reader = cdr.reader_from(w.buf)
     let a: i32 = r.get_i32()
     let b: i32 = r.get_i32()
-    if a == 7 as i32 and b == 0 as i32 and r.result() == cdr.Status.Truncated
+    if a == (7 as i32) and b == (0 as i32) and r.result() == cdr.Status.Truncated
         n = n + 1
     // A byte that is neither 0 nor 1 is not a bool.
     var wb: cdr.Writer = cdr.writer_le()
