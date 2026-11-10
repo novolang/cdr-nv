@@ -272,9 +272,9 @@ fn test_names_in_the_generated_module() [io]
 fn test_generate_refusals() [io]
     let m = msggen.parse_msg("p", "M", "int32 x\n")!
     test.assert(has(gerr(msggen.generate("Bad", [m], msggen.default_options())), "package name"))
-    let zero = msggen.GenOptions { string_cap: 0, seq_cap: 4, prefix: "", sources: [] }
+    let zero = msggen.GenOptions { string_cap: 0, seq_cap: 4, prefix: "", sources: [], pool: [] }
     test.assert(has(gerr(msggen.generate("p", [m], zero)), "at least 1"))
-    let zero2 = msggen.GenOptions { string_cap: 4, seq_cap: 0, prefix: "", sources: [] }
+    let zero2 = msggen.GenOptions { string_cap: 4, seq_cap: 0, prefix: "", sources: [], pool: [] }
     test.assert(has(gerr(msggen.generate("p", [m], zero2)), "at least 1"))
     test.assert(has(gerr(msggen.generate("q", [m], msggen.default_options())), "not in the package"))
 
@@ -287,9 +287,18 @@ fn test_generated_tests_name_every_message() [io]
     test.assert(has(text, "let tn = p.M.type_name()"))
 
 @test
+fn test_a_to_do_marker_in_a_definition_is_written_out() [io]
+    let m = msggen.parse_msg("p", "M", "# TO" + "DO(x): link this\nint32 a\n")!
+    match msggen.generate("p", [m], msggen.default_options())
+        Ok(text) =>
+            test.assert(has(text, "To do(x): link this"))
+            test.assert(not has(text, "TO" + "DO"))
+        Err(e)   => test.fail(e)
+
+@test
 fn test_capacities_and_prefix_reach_the_module() [io]
     let m = msggen.parse_msg("p", "M", "string a\nint32[] b\nOther c\nq/Far d\n")!
-    let opt = msggen.GenOptions { string_cap: 12, seq_cap: 3, prefix: "x.", sources: ["M.msg"] }
+    let opt = msggen.GenOptions { string_cap: 12, seq_cap: 3, prefix: "x.", sources: ["M.msg"], pool: [] }
     match msggen.generate("p", [m], opt)
         Ok(text) =>
             test.assert(has(text, "String[12]"))
@@ -367,3 +376,48 @@ fn test_generated_defaults() [io]
     var r = cdr.reader_from(long.buf)
     var inner = cdr_test_msgs.Inner.new()
     test.assert_eq_str(cdr.status_name(inner.decode_into(var r)), "too long")
+
+// The directory of definitions a job reads other packages' types from.
+fn write_inc(path: Str, text: Str) [fs]
+    let parts = str.split(path, "/")
+    let dir = str.join(list.take(parts, list.len(parts) - 1), "/")
+    test.assert(fs.mkdir_all(dir))
+    test.assert(fs.write(path, text))
+
+fn job_with(include: Str, files: [Str]) -> msggen.Job
+    var args = ["--package", "p", "--out", "o", "--include", include]
+    for f in files
+        list.push(args, f)
+    msggen.parse_args(args)!
+
+// Whether the module text for `texts` has `part` in it.
+fn module_has(include: Str, files: [Str], texts: [Str], part: Str) -> Bool [fs]
+    match msggen.build_module(job_with(include, files), texts)
+        Ok(text) => has(text, part)
+        Err(_)   => false
+
+@test
+fn test_hashes_follow_the_include_directory() [io, fs]
+    write_inc("_novo/inc/q/msg/Far.msg", "q/Deeper d\nint8 x\n")
+    write_inc("_novo/inc/q/msg/Deeper.msg", "float32 y\n")
+    write_inc("_novo/inc/r/msg/Bad.msg", "int32\n")
+    write_inc("_novo/inc/service_msgs/msg/ServiceEventInfo.msg", "uint8 event_type\nint64 sequence_number\n")
+    // A type of another package is read with the types it contains; one
+    // of the job's own is not read at all.
+    test.assert(module_has("_novo/inc", ["d/M.msg", "d/Other.msg"], ["q/Far f\nOther o\n", "int32 v\n"],
+        "fn type_hash()"))
+    // A type that is not in the include directory, or whose file does not
+    // parse, or no include directory at all: no hash.
+    test.assert(not module_has("_novo/inc", ["d/M.msg"], ["s/Nowhere n\n"], "fn type_hash()"))
+    test.assert(not module_has("_novo/inc", ["d/M.msg"], ["r/Bad b\n"], "fn type_hash()"))
+    test.assert(not module_has("", ["d/M.msg"], ["q/Far f\n"], "fn type_hash()"))
+    test.assert(module_has("", ["d/M.msg"], ["int32 f\n"], "fn type_hash()"))
+    // A service reads ServiceEventInfo too and gets the service's hash.
+    test.assert(module_has("_novo/inc", ["d/S.srv"], ["int32 a\n---\nint32 b\n"], "fn service_type_hash()"))
+    test.assert(module_has("_novo/inc", ["d/S.srv"], ["int32 a\n---\nint32 b\n"], "fn service_type_name()"))
+    test.assert(not module_has("", ["d/S.srv"], ["int32 a\n---\nint32 b\n"], "fn service_type_hash()"))
+    match msggen.build_tests(job_with("_novo/inc", ["d/S.srv"]), ["int32 a\n---\nint32 b\n"])
+        Ok(text) =>
+            test.assert(has(text, ".service_type_hash()), 71"))
+            test.assert(has(text, ".type_hash()), 71"))
+        Err(x)   => test.fail(x)

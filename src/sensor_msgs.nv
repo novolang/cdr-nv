@@ -43,6 +43,10 @@ impl Imu
     fn dds_type_name() -> Str
         "sensor_msgs::msg::dds_::Imu_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_7d9a00ff131080897a5ec7e26e315954b8eae3353c3f995c55faf71574000b5b"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Imu
         Imu {
@@ -112,6 +116,9 @@ impl Imu
             return Some(m)
         None
 
+// status is not yet set
+pub const NAV_SAT_STATUS_STATUS_UNKNOWN = -2
+
 // unable to fix position
 pub const NAV_SAT_STATUS_STATUS_NO_FIX = -1
 
@@ -123,6 +130,9 @@ pub const NAV_SAT_STATUS_STATUS_SBAS_FIX = 1
 
 // with ground-based augmentation
 pub const NAV_SAT_STATUS_STATUS_GBAS_FIX = 2
+
+// Remember service is a bitfield, so checking (service & SERVICE_UNKNOWN) will not work. Use == instead.
+pub const NAV_SAT_STATUS_SERVICE_UNKNOWN = 0
 
 // The constant SERVICE_GPS of the ROS 2 message `sensor_msgs/msg/NavSatStatus`.
 pub const NAV_SAT_STATUS_SERVICE_GPS = 1
@@ -141,7 +151,7 @@ pub const NAV_SAT_STATUS_SERVICE_GALILEO = 8
 // Navigation Satellite fix status for any Global Navigation Satellite System.
 pub @value
 struct NavSatStatus
-    // status
+    // STATUS_UNKNOWN
     status: i8
     // service
     service: u16
@@ -155,10 +165,14 @@ impl NavSatStatus
     fn dds_type_name() -> Str
         "sensor_msgs::msg::dds_::NavSatStatus_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_d1ed3befa628e09571bd273b888ba1c1fd187c9a5e0006b385d7e5e9095a3204"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> NavSatStatus
         NavSatStatus {
-            status: 0 as i8,
+            status: (-2) as i8,
             service: 0 as u16 }
 
     // A message with every field set to a recognisable value that is not zero: strings of
@@ -218,6 +232,10 @@ impl Temperature
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "sensor_msgs::msg::dds_::Temperature_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_72514a14126ab9f8a9abec974c78e5610a367b59db5da355ff1fb982d5bad4b8"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Temperature

@@ -13,6 +13,8 @@
 //   Point32.msg
 //   PointStamped.msg
 //   Polygon.msg
+//   PolygonInstance.msg
+//   PolygonInstanceStamped.msg
 //   PolygonStamped.msg
 //   Pose.msg
 //   Pose2D.msg
@@ -30,6 +32,8 @@
 //   TwistWithCovarianceStamped.msg
 //   Vector3.msg
 //   Vector3Stamped.msg
+//   VelocityStamped.msg
+//   VelocityWithCovarianceStamped.msg
 //   Wrench.msg
 //   WrenchStamped.msg
 //
@@ -56,11 +60,9 @@ fn get_str_64(var r: cdr.Reader, var s: String[64])
     r.end_string()
 
 // The ROS 2 message `geometry_msgs/msg/Accel`.
-//
-// This expresses acceleration in free space broken into its linear and angular parts.
 pub @value
 struct Accel
-    // linear
+    // This expresses acceleration in free space broken into its linear and angular parts.
     linear: Vector3
     // angular
     angular: Vector3
@@ -73,6 +75,10 @@ impl Accel
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Accel_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_dc448243ded9b1fcbcca24aba0c22f013dae06c354ba2d849571c0a2a3f57ca0"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Accel
@@ -118,11 +124,9 @@ impl Accel
         None
 
 // The ROS 2 message `geometry_msgs/msg/AccelStamped`.
-//
-// A Accel with reference coordinate frame and timestamp
 pub @value
 struct AccelStamped
-    // header
+    // An accel with reference coordinate frame and timestamp
     header: std_msgs.Header
     // accel
     accel: Accel
@@ -135,6 +139,10 @@ impl AccelStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::AccelStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_ef1df9eabae0a708cc049a061ebcddc4e2a5f745730100ba680e086a9698b165"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> AccelStamped
@@ -186,7 +194,7 @@ pub @value
 struct AccelWithCovariance
     // accel
     accel: Accel
-    // Row-major representation of the 6x6 covariance matrix.
+    // Row-major representation of the 6x6 covariance matrix
     // The orientation parameters use a fixed-axis representation.
     // In order, the parameters are:
     // (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
@@ -200,6 +208,10 @@ impl AccelWithCovariance
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::AccelWithCovariance_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_230d51bd53bc36f260574e73b42941cefe44684753480b6fc330c032c5db5997"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> AccelWithCovariance
@@ -251,11 +263,9 @@ impl AccelWithCovariance
         None
 
 // The ROS 2 message `geometry_msgs/msg/AccelWithCovarianceStamped`.
-//
-// This represents an estimated accel with reference coordinate frame and timestamp.
 pub @value
 struct AccelWithCovarianceStamped
-    // header
+    // This represents an estimated accel with reference coordinate frame and timestamp.
     header: std_msgs.Header
     // accel
     accel: AccelWithCovariance
@@ -268,6 +278,10 @@ impl AccelWithCovarianceStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::AccelWithCovarianceStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_61c9ad8928e71dd95ce791b2f02809ee2a0bbcc42cd0e4047fd00a822a08e444"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> AccelWithCovarianceStamped
@@ -319,7 +333,7 @@ struct Inertia
     m: Float
     // Center of mass [m]
     com: Vector3
-    // Inertia Tensor [kg-m^2]
+    // Inertia Tensor [kg-m^2] about the center of mass
     // | ixx ixy ixz |
     // I = | ixy iyy iyz |
     // | ixz iyz izz |
@@ -343,6 +357,10 @@ impl Inertia
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Inertia_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_2ddd5dab5c347825ba2e56c895ddccfd0b8efe53ae931bf67f905529930b4bd7"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Inertia
@@ -413,7 +431,7 @@ impl Inertia
 
 // The ROS 2 message `geometry_msgs/msg/InertiaStamped`.
 //
-// A Inertia with reference coordinate frame and timestamp
+// An Inertia with a time stamp and reference frame.
 pub @value
 struct InertiaStamped
     // header
@@ -429,6 +447,10 @@ impl InertiaStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::InertiaStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_766be45976252babf7f9d8ac4ae7c912a7ceccf71035622529f27518b695aa09"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> InertiaStamped
@@ -474,11 +496,9 @@ impl InertiaStamped
         None
 
 // The ROS 2 message `geometry_msgs/msg/Point`.
-//
-// This contains the position of a point in free space
 pub @value
 struct Point
-    // x
+    // This contains the position of a point in free space
     x: Float
     // y
     y: Float
@@ -493,6 +513,10 @@ impl Point
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Point_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_6963084842a9b04494d6b2941d11444708d892da2f4b09843b9c43f42a7f6881"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Point
@@ -563,6 +587,10 @@ impl Point32
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Point32_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_2fc4db7cae16a4582c79a56b66173a8d48d52c7dc520ddc55a0d4bcf2a4bfdbc"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Point32
         Point32 {
@@ -612,7 +640,7 @@ impl Point32
 
 // The ROS 2 message `geometry_msgs/msg/PointStamped`.
 //
-// A Point with reference coordinate frame and timestamp
+// This represents a Point with reference coordinate frame and timestamp
 pub @value
 struct PointStamped
     // header
@@ -628,6 +656,10 @@ impl PointStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::PointStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_4c0296af86e01e562e9e0405d138a01537247580076c58ea38d7923ac1045897"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> PointStamped
@@ -674,7 +706,7 @@ impl PointStamped
 
 // The ROS 2 message `geometry_msgs/msg/Polygon`.
 //
-// A specification of a polygon where the first and last points are assumed to be connected.
+// A specification of a polygon where the first and last points are assumed to be connected
 pub @value
 struct Polygon
     // points
@@ -688,6 +720,10 @@ impl Polygon
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Polygon_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_3782f9f0bf044964d692d6c017d705e37611afb1f0bf6a9dee248a7dda0f784a"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Polygon
@@ -738,9 +774,143 @@ impl Polygon
             return Some(m)
         None
 
+// The ROS 2 message `geometry_msgs/msg/PolygonInstance`.
+//
+// A specification of a polygon where the first and last points are assumed to be connected
+// It includes a unique identification field for disambiguating multiple instances
+pub @value
+struct PolygonInstance
+    // polygon
+    polygon: Polygon
+    // id
+    id: Int
+
+impl PolygonInstance
+    // The name ROS 2 gives this message type.
+    fn type_name() -> Str
+        "geometry_msgs/msg/PolygonInstance"
+
+    // The name DDS knows this message type by.
+    fn dds_type_name() -> Str
+        "geometry_msgs::msg::dds_::PolygonInstance_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_fa1cb3dc774329865258afef74f65b0553d487510c6d0f93ba38cc32d62ac0e5"
+
+    // A message with every field at its default, which is zero unless the definition says otherwise.
+    fn new() -> PolygonInstance
+        PolygonInstance {
+            polygon: Polygon.new(),
+            id: 0 }
+
+    // A message with every field set to a recognisable value that is not zero: strings of
+    // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
+    fn sample() -> PolygonInstance
+        PolygonInstance {
+            polygon: Polygon.sample(),
+            id: 2 }
+
+    // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
+    fn write_to(self, var w: cdr.Writer)
+        self.polygon.write_to(var w)
+        w.put_i64(self.id)
+
+    // Read this message's fields from `r` into `self`.
+    fn read_from(var self, var r: cdr.Reader)
+        self.polygon.read_from(var r)
+        self.id = r.get_i64()
+
+    // Write the message to `w` and answer the writer's status: `Success`, or the first thing that went wrong.
+    fn encode(self, var w: cdr.Writer) -> cdr.Status
+        self.write_to(var w)
+        w.result()
+
+    // Read the message from `r` into `self` and answer the reader's status.
+    fn decode_into(var self, var r: cdr.Reader) -> cdr.Status
+        self.read_from(var r)
+        r.result()
+
+    // Read a message from `r`, or answer None; the reason is `r.result()`.  The answer is
+    // an optional value and not a `Result` because a `Result` that carries a value is a
+    // heap cell on a device.
+    fn decode(var r: cdr.Reader) -> ?PolygonInstance
+        var m = PolygonInstance.new()
+        m.read_from(var r)
+        if r.ok()
+            return Some(m)
+        None
+
+// The ROS 2 message `geometry_msgs/msg/PolygonInstanceStamped`.
+//
+// This represents a Polygon with reference coordinate frame and timestamp
+// It includes a unique identification field for disambiguating multiple instances
+pub @value
+struct PolygonInstanceStamped
+    // header
+    header: std_msgs.Header
+    // polygon
+    polygon: PolygonInstance
+
+impl PolygonInstanceStamped
+    // The name ROS 2 gives this message type.
+    fn type_name() -> Str
+        "geometry_msgs/msg/PolygonInstanceStamped"
+
+    // The name DDS knows this message type by.
+    fn dds_type_name() -> Str
+        "geometry_msgs::msg::dds_::PolygonInstanceStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_802f37ea4398d7ce547936aab1fd278923716a13c63373887cd896957434ce2f"
+
+    // A message with every field at its default, which is zero unless the definition says otherwise.
+    fn new() -> PolygonInstanceStamped
+        PolygonInstanceStamped {
+            header: std_msgs.Header.new(),
+            polygon: PolygonInstance.new() }
+
+    // A message with every field set to a recognisable value that is not zero: strings of
+    // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
+    fn sample() -> PolygonInstanceStamped
+        PolygonInstanceStamped {
+            header: std_msgs.Header.sample(),
+            polygon: PolygonInstance.sample() }
+
+    // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
+    fn write_to(self, var w: cdr.Writer)
+        self.header.write_to(var w)
+        self.polygon.write_to(var w)
+
+    // Read this message's fields from `r` into `self`.
+    fn read_from(var self, var r: cdr.Reader)
+        self.header.read_from(var r)
+        self.polygon.read_from(var r)
+
+    // Write the message to `w` and answer the writer's status: `Success`, or the first thing that went wrong.
+    fn encode(self, var w: cdr.Writer) -> cdr.Status
+        self.write_to(var w)
+        w.result()
+
+    // Read the message from `r` into `self` and answer the reader's status.
+    fn decode_into(var self, var r: cdr.Reader) -> cdr.Status
+        self.read_from(var r)
+        r.result()
+
+    // Read a message from `r`, or answer None; the reason is `r.result()`.  The answer is
+    // an optional value and not a `Result` because a `Result` that carries a value is a
+    // heap cell on a device.
+    fn decode(var r: cdr.Reader) -> ?PolygonInstanceStamped
+        var m = PolygonInstanceStamped.new()
+        m.read_from(var r)
+        if r.ok()
+            return Some(m)
+        None
+
 // The ROS 2 message `geometry_msgs/msg/PolygonStamped`.
 //
-// A Polygon with reference coordinate frame and timestamp
+// This represents a Polygon with reference coordinate frame and timestamp
 pub @value
 struct PolygonStamped
     // header
@@ -756,6 +926,10 @@ impl PolygonStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::PolygonStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_b7cf07932f1523d4b4088075945c1a0141f7cd21da87cc940fc61652e9138b46"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> PolygonStamped
@@ -819,6 +993,10 @@ impl Pose
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Pose_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_d501954e9476cea2996984e812054b68026ae0bfae789d9a10b23daf35cc90fa"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Pose
         Pose {
@@ -864,8 +1042,8 @@ impl Pose
 
 // The ROS 2 message `geometry_msgs/msg/Pose2D`.
 //
-// Deprecated as of Foxy and will be removed in a future release.
-// This expresses a position and orientation on a 2D manifold.
+// Deprecated as of Foxy and will potentially be removed in any following release.
+// Please use the full 3D pose.
 pub @value
 struct Pose2D
     // x
@@ -883,6 +1061,10 @@ impl Pose2D
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Pose2D_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_d68efa5b46e70f7b16ca23085474fdac5a44b638783ec42f661da64da4724ccc"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Pose2D
@@ -949,6 +1131,10 @@ impl PoseArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::PoseArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_af0cc36d190e104d546d168d6b39df04fa4b4ccecf59cb4c9ed328d3d5004aa0"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> PoseArray
@@ -1022,6 +1208,10 @@ impl PoseStamped
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::PoseStamped_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_10f3786d7d40fd2b54367835614bff85d4ad3b5dab62bf8bca0cc232d73b4cd8"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> PoseStamped
         PoseStamped {
@@ -1072,7 +1262,7 @@ pub @value
 struct PoseWithCovariance
     // pose
     pose: Pose
-    // Row-major representation of the 6x6 covariance matrix.
+    // Row-major representation of the 6x6 covariance matrix
     // The orientation parameters use a fixed-axis representation.
     // In order, the parameters are:
     // (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
@@ -1086,6 +1276,10 @@ impl PoseWithCovariance
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::PoseWithCovariance_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_9a7c0fd234b7f45c6098745ecccd773ca1085670e64107135397aee31c02e1bb"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> PoseWithCovariance
@@ -1138,7 +1332,7 @@ impl PoseWithCovariance
 
 // The ROS 2 message `geometry_msgs/msg/PoseWithCovarianceStamped`.
 //
-// This expresses an estimated pose with a reference coordinate frame and timestamp.
+// This expresses an estimated pose with a reference coordinate frame and timestamp
 pub @value
 struct PoseWithCovarianceStamped
     // header
@@ -1154,6 +1348,10 @@ impl PoseWithCovarianceStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::PoseWithCovarianceStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_26432f9803e43727d3c8f668d1fdb3c630f548af631e2f4e31382371bfea3b6e"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> PoseWithCovarianceStamped
@@ -1221,6 +1419,10 @@ impl Quaternion
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Quaternion_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_8a765f66778c8ff7c8ab94afcc590a2ed5325a1d9a076ffff38fbce36f458684"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Quaternion
         Quaternion {
@@ -1274,7 +1476,7 @@ impl Quaternion
 
 // The ROS 2 message `geometry_msgs/msg/QuaternionStamped`.
 //
-// A Quaternion with reference coordinate frame and timestamp
+// This represents an orientation with reference coordinate frame and timestamp.
 pub @value
 struct QuaternionStamped
     // header
@@ -1290,6 +1492,10 @@ impl QuaternionStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::QuaternionStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_381add86c6c3160644d228ca342182c7fd6c7fab11c7a85ad817a9cc22dbac6e"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> QuaternionStamped
@@ -1353,6 +1559,10 @@ impl Transform
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Transform_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_beb83fbe698636351461f6f35d1abb20010c43d55374d81bd041f1ba2581fddc"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Transform
         Transform {
@@ -1402,7 +1612,7 @@ impl Transform
 // to the coordinate frame child_frame_id at the time of header.stamp
 pub @value
 struct TransformStamped
-    // header
+    // The frame id in the header is used as the reference frame of this transform.
     header: std_msgs.Header
     // The frame id of the child frame to which this transform points.
     child_frame_id: String[64]
@@ -1417,6 +1627,10 @@ impl TransformStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::TransformStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_0a241f87d04668d94099cbb5ba11691d5ad32c2f29682e4eb5653424bd275206"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> TransformStamped
@@ -1486,6 +1700,10 @@ impl Twist
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Twist_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Twist
         Twist {
@@ -1531,7 +1749,7 @@ impl Twist
 
 // The ROS 2 message `geometry_msgs/msg/TwistStamped`.
 //
-// A Twist with reference coordinate frame and timestamp
+// A twist with reference coordinate frame and timestamp
 pub @value
 struct TwistStamped
     // header
@@ -1547,6 +1765,10 @@ impl TwistStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::TwistStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_5f0fcd4f81d5d06ad9b4c4c63e3ea51b82d6ae4d0558f1d475229b1121db6f64"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> TwistStamped
@@ -1598,7 +1820,7 @@ pub @value
 struct TwistWithCovariance
     // twist
     twist: Twist
-    // Row-major representation of the 6x6 covariance matrix.
+    // Row-major representation of the 6x6 covariance matrix
     // The orientation parameters use a fixed-axis representation.
     // In order, the parameters are:
     // (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
@@ -1612,6 +1834,10 @@ impl TwistWithCovariance
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::TwistWithCovariance_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_49f574f033f095d8b6cd1beaca5ca7925e296e84af1716d16c89d38b059c8c18"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> TwistWithCovariance
@@ -1681,6 +1907,10 @@ impl TwistWithCovarianceStamped
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::TwistWithCovarianceStamped_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_77b67434531e6529b7a0091357b186b6ebdb17fd9ffd3e0c7ce9d3fb11a44563"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> TwistWithCovarianceStamped
         TwistWithCovarianceStamped {
@@ -1727,9 +1957,6 @@ impl TwistWithCovarianceStamped
 // The ROS 2 message `geometry_msgs/msg/Vector3`.
 //
 // This represents a vector in free space.
-// This is semantically different than a point.
-// A vector is always anchored at the origin.
-// When a transform is applied to a vector, only the rotational component is applied.
 pub @value
 struct Vector3
     // x
@@ -1747,6 +1974,10 @@ impl Vector3
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Vector3_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_cc12fe83e4c02719f1ce8070bfd14aecd40f75a96696a67a2a1f37f7dbb0765d"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Vector3
@@ -1797,7 +2028,7 @@ impl Vector3
 
 // The ROS 2 message `geometry_msgs/msg/Vector3Stamped`.
 //
-// A Vector3 with reference coordinate frame and timestamp
+// This represents a Vector3 with reference coordinate frame and timestamp
 pub @value
 struct Vector3Stamped
     // header
@@ -1813,6 +2044,10 @@ impl Vector3Stamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Vector3Stamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_d4829622288cbb443886e7ea94ea5671a3b1be6bab4ad04224432a65f7d7887a"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Vector3Stamped
@@ -1857,6 +2092,175 @@ impl Vector3Stamped
             return Some(m)
         None
 
+// The ROS 2 message `geometry_msgs/msg/VelocityStamped`.
+//
+// This expresses the timestamped velocity vector of a frame 'body_frame_id' in the reference frame 'reference_frame_id' expressed from arbitrary observation frame 'header.frame_id'.
+// - If the 'body_frame_id' and 'header.frame_id' are identical, the velocity is observed and defined in the local coordinates system of the body
+// which is the usual use-case in mobile robotics and is also known as a body twist.
+pub @value
+struct VelocityStamped
+    // header
+    header: std_msgs.Header
+    // body_frame_id
+    body_frame_id: String[64]
+    // reference_frame_id
+    reference_frame_id: String[64]
+    // velocity
+    velocity: Twist
+
+impl VelocityStamped
+    // The name ROS 2 gives this message type.
+    fn type_name() -> Str
+        "geometry_msgs/msg/VelocityStamped"
+
+    // The name DDS knows this message type by.
+    fn dds_type_name() -> Str
+        "geometry_msgs::msg::dds_::VelocityStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_55e7196186c8dbe4375278d7f1ac050dd8c9bacade1cf3eef8460fa667bd2457"
+
+    // A message with every field at its default, which is zero unless the definition says otherwise.
+    fn new() -> VelocityStamped
+        VelocityStamped {
+            header: std_msgs.Header.new(),
+            body_frame_id: String.new(),
+            reference_frame_id: String.new(),
+            velocity: Twist.new() }
+
+    // A message with every field set to a recognisable value that is not zero: strings of
+    // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
+    fn sample() -> VelocityStamped
+        var s_body_frame_id: String[64] = String.new()
+        let _ = s_body_frame_id.push_str("s1")
+        var s_reference_frame_id: String[64] = String.new()
+        let _ = s_reference_frame_id.push_str("s2")
+        VelocityStamped {
+            header: std_msgs.Header.sample(),
+            body_frame_id: s_body_frame_id,
+            reference_frame_id: s_reference_frame_id,
+            velocity: Twist.sample() }
+
+    // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
+    fn write_to(self, var w: cdr.Writer)
+        self.header.write_to(var w)
+        put_str_64(var w, self.body_frame_id)
+        put_str_64(var w, self.reference_frame_id)
+        self.velocity.write_to(var w)
+
+    // Read this message's fields from `r` into `self`.
+    fn read_from(var self, var r: cdr.Reader)
+        self.header.read_from(var r)
+        get_str_64(var r, var self.body_frame_id)
+        get_str_64(var r, var self.reference_frame_id)
+        self.velocity.read_from(var r)
+
+    // Write the message to `w` and answer the writer's status: `Success`, or the first thing that went wrong.
+    fn encode(self, var w: cdr.Writer) -> cdr.Status
+        self.write_to(var w)
+        w.result()
+
+    // Read the message from `r` into `self` and answer the reader's status.
+    fn decode_into(var self, var r: cdr.Reader) -> cdr.Status
+        self.read_from(var r)
+        r.result()
+
+    // Read a message from `r`, or answer None; the reason is `r.result()`.  The answer is
+    // an optional value and not a `Result` because a `Result` that carries a value is a
+    // heap cell on a device.
+    fn decode(var r: cdr.Reader) -> ?VelocityStamped
+        var m = VelocityStamped.new()
+        m.read_from(var r)
+        if r.ok()
+            return Some(m)
+        None
+
+// The ROS 2 message `geometry_msgs/msg/VelocityWithCovarianceStamped`.
+//
+// A timestamped velocity of a body whose frame is 'body_frame_id', measured
+// relative to the reference frame 'reference_frame_id', with the velocity and
+// covariance both expressed in the basis of the observation frame
+// 'header.frame_id'.
+pub @value
+struct VelocityWithCovarianceStamped
+    // header
+    header: std_msgs.Header
+    // body_frame_id
+    body_frame_id: String[64]
+    // reference_frame_id
+    reference_frame_id: String[64]
+    // velocity
+    velocity: TwistWithCovariance
+
+impl VelocityWithCovarianceStamped
+    // The name ROS 2 gives this message type.
+    fn type_name() -> Str
+        "geometry_msgs/msg/VelocityWithCovarianceStamped"
+
+    // The name DDS knows this message type by.
+    fn dds_type_name() -> Str
+        "geometry_msgs::msg::dds_::VelocityWithCovarianceStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_f0957be0a63943af8b24abcb20e4e1fc8b71368e872dbf802f87b8a2ca8e60a0"
+
+    // A message with every field at its default, which is zero unless the definition says otherwise.
+    fn new() -> VelocityWithCovarianceStamped
+        VelocityWithCovarianceStamped {
+            header: std_msgs.Header.new(),
+            body_frame_id: String.new(),
+            reference_frame_id: String.new(),
+            velocity: TwistWithCovariance.new() }
+
+    // A message with every field set to a recognisable value that is not zero: strings of
+    // text, sequences of two elements, numbers that differ by field.  A test round-trips it.
+    fn sample() -> VelocityWithCovarianceStamped
+        var s_body_frame_id: String[64] = String.new()
+        let _ = s_body_frame_id.push_str("s1")
+        var s_reference_frame_id: String[64] = String.new()
+        let _ = s_reference_frame_id.push_str("s2")
+        VelocityWithCovarianceStamped {
+            header: std_msgs.Header.sample(),
+            body_frame_id: s_body_frame_id,
+            reference_frame_id: s_reference_frame_id,
+            velocity: TwistWithCovariance.sample() }
+
+    // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.
+    fn write_to(self, var w: cdr.Writer)
+        self.header.write_to(var w)
+        put_str_64(var w, self.body_frame_id)
+        put_str_64(var w, self.reference_frame_id)
+        self.velocity.write_to(var w)
+
+    // Read this message's fields from `r` into `self`.
+    fn read_from(var self, var r: cdr.Reader)
+        self.header.read_from(var r)
+        get_str_64(var r, var self.body_frame_id)
+        get_str_64(var r, var self.reference_frame_id)
+        self.velocity.read_from(var r)
+
+    // Write the message to `w` and answer the writer's status: `Success`, or the first thing that went wrong.
+    fn encode(self, var w: cdr.Writer) -> cdr.Status
+        self.write_to(var w)
+        w.result()
+
+    // Read the message from `r` into `self` and answer the reader's status.
+    fn decode_into(var self, var r: cdr.Reader) -> cdr.Status
+        self.read_from(var r)
+        r.result()
+
+    // Read a message from `r`, or answer None; the reason is `r.result()`.  The answer is
+    // an optional value and not a `Result` because a `Result` that carries a value is a
+    // heap cell on a device.
+    fn decode(var r: cdr.Reader) -> ?VelocityWithCovarianceStamped
+        var m = VelocityWithCovarianceStamped.new()
+        m.read_from(var r)
+        if r.ok()
+            return Some(m)
+        None
+
 // The ROS 2 message `geometry_msgs/msg/Wrench`.
 //
 // This represents force in free space, separated into its linear and angular parts.
@@ -1875,6 +2279,10 @@ impl Wrench
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::Wrench_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_018e8519d57c16adbe97c9fe1460ef21fec7e31bc541de3d653a35895677ce52"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Wrench
@@ -1921,7 +2329,7 @@ impl Wrench
 
 // The ROS 2 message `geometry_msgs/msg/WrenchStamped`.
 //
-// A Wrench with reference coordinate frame and timestamp
+// A wrench with reference coordinate frame and timestamp
 pub @value
 struct WrenchStamped
     // header
@@ -1937,6 +2345,10 @@ impl WrenchStamped
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "geometry_msgs::msg::dds_::WrenchStamped_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_8dc3deaf06b2ab281f9f9a742a8961c328ca7cec16e3fd6586d3a5c83fa78f77"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> WrenchStamped

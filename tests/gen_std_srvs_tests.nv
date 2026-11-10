@@ -8,6 +8,7 @@
 // truncated.
 
 use std.bytes
+use std.str
 use std.test
 use cdr
 use cdrbytes
@@ -33,6 +34,10 @@ fn test_std_srvs_Empty_Request() [io]
     test.assert_eq_str(tn, "std_srvs/srv/Empty_Request")
     let dn = std_srvs.EmptyRequest.dds_type_name()
     test.assert_eq_str(dn, "std_srvs::srv::dds_::Empty_Request_")
+    test.assert_eq(str.len(std_srvs.EmptyRequest.type_hash()), 71)
+    test.assert_eq(str.len(std_srvs.EmptyRequest.service_type_hash()), 71)
+    let sn = std_srvs.EmptyRequest.service_type_name()
+    test.assert_eq_str(sn, "std_srvs/srv/Empty")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -62,6 +67,7 @@ fn test_std_srvs_Empty_Response() [io]
     test.assert_eq_str(tn, "std_srvs/srv/Empty_Response")
     let dn = std_srvs.EmptyResponse.dds_type_name()
     test.assert_eq_str(dn, "std_srvs::srv::dds_::Empty_Response_")
+    test.assert_eq(str.len(std_srvs.EmptyResponse.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -91,6 +97,10 @@ fn test_std_srvs_SetBool_Request() [io]
     test.assert_eq_str(tn, "std_srvs/srv/SetBool_Request")
     let dn = std_srvs.SetBoolRequest.dds_type_name()
     test.assert_eq_str(dn, "std_srvs::srv::dds_::SetBool_Request_")
+    test.assert_eq(str.len(std_srvs.SetBoolRequest.type_hash()), 71)
+    test.assert_eq(str.len(std_srvs.SetBoolRequest.service_type_hash()), 71)
+    let sn = std_srvs.SetBoolRequest.service_type_name()
+    test.assert_eq_str(sn, "std_srvs/srv/SetBool")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -120,6 +130,7 @@ fn test_std_srvs_SetBool_Response() [io]
     test.assert_eq_str(tn, "std_srvs/srv/SetBool_Response")
     let dn = std_srvs.SetBoolResponse.dds_type_name()
     test.assert_eq_str(dn, "std_srvs::srv::dds_::SetBool_Response_")
+    test.assert_eq(str.len(std_srvs.SetBoolResponse.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -149,6 +160,10 @@ fn test_std_srvs_Trigger_Request() [io]
     test.assert_eq_str(tn, "std_srvs/srv/Trigger_Request")
     let dn = std_srvs.TriggerRequest.dds_type_name()
     test.assert_eq_str(dn, "std_srvs::srv::dds_::Trigger_Request_")
+    test.assert_eq(str.len(std_srvs.TriggerRequest.type_hash()), 71)
+    test.assert_eq(str.len(std_srvs.TriggerRequest.service_type_hash()), 71)
+    let sn = std_srvs.TriggerRequest.service_type_name()
+    test.assert_eq_str(sn, "std_srvs/srv/Trigger")
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -178,6 +193,7 @@ fn test_std_srvs_Trigger_Response() [io]
     test.assert_eq_str(tn, "std_srvs/srv/Trigger_Response")
     let dn = std_srvs.TriggerResponse.dds_type_name()
     test.assert_eq_str(dn, "std_srvs::srv::dds_::Trigger_Response_")
+    test.assert_eq(str.len(std_srvs.TriggerResponse.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")

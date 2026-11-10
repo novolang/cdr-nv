@@ -44,6 +44,7 @@
 
 use std.str
 use std.fs
+use std.crypto
 
 // How a field's shape reads in the definition.
 pub const SHAPE_SCALAR = 0
@@ -125,11 +126,13 @@ pub struct GenOptions
     prefix: Str
     // The names of the definition files, for the header comment.
     sources: [Str]
+    // Messages of other packages that the generated ones contain, for the type hashes.
+    pool: [Message]
 
 // The options a first generation uses: 64-byte strings, 16-element
 // sequences, and the other packages' modules beside the generated one.
 pub fn default_options() -> GenOptions
-    GenOptions { string_cap: 64, seq_cap: 16, prefix: "", sources: [] }
+    GenOptions { string_cap: 64, seq_cap: 16, prefix: "", sources: [], pool: [] }
 
 // ---------------------------------------------------------------------
 // Characters.
@@ -840,7 +843,11 @@ fn prim_zero(prim: Str) -> Str
 fn comment_lines(indent: Str, doc: [Str]) -> [Str]
     var out: [Str] = []
     for d in doc
-        list.push(out, (if str.len(d) == 0 then "${indent}//" else "${indent}// ${d}"))
+        // A definition may carry a to-do marker for its own authors.  In the
+        // generated module it would read as an unfinished line of this package,
+        // so the word is written out as two.
+        let text = str.replace_all(d, "TO" + "DO", "To do")
+        list.push(out, (if str.len(text) == 0 then "${indent}//" else "${indent}// ${text}"))
     out
 
 // Whether a type is a primitive that is neither a string nor nested.
@@ -992,7 +999,7 @@ fn string_helpers(cap: Int) -> [Str]
         ""]
 
 // The text of one message: its constants, its struct and its methods.
-fn message_text(m: Message, opt: GenOptions) -> [Str]
+fn message_text(m: Message, msgs: [Message], opt: GenOptions) -> [Str]
     var out: [Str] = []
     let prefix = upper_snake(m.ros_name)
     for c in m.consts
@@ -1041,6 +1048,8 @@ fn message_text(m: Message, opt: GenOptions) -> [Str]
     list.push(out, "    fn dds_type_name() -> Str")
     list.push(out, "        \"${m.dds_name}\"")
     list.push(out, "")
+    for l in hash_lines(m, msgs, opt)
+        list.push(out, l)
     list.push(out,
         "    // A message with every field at its default, which is zero unless the definition says otherwise.")
     list.push(out, "    fn new() -> ${m.name}")
@@ -1152,7 +1161,7 @@ pub fn generate(pkg: Str, msgs: [Message], opt: GenOptions) -> Result<Str, Str>
     for m in msgs
         if m.pkg != pkg
             return Err("`${m.type_name}` is not in the package `${pkg}`")
-        for l in message_text(m, opt)
+        for l in message_text(m, msgs, opt)
             list.push(out, l)
         list.push(out, "")
     Ok(str.join(out, "\n"))
@@ -1230,6 +1239,20 @@ fn sample_lines(m: Message, opt: GenOptions) -> [Str]
     list.push(out, "")
     out
 
+// The test lines that call the hash methods a message has: each answers
+// `RIHS01_` and 64 digits, 71 characters.
+fn hash_checks(m: Message, msgs: [Message], opt: GenOptions, ty: Str) -> [Str]
+    var out: [Str] = []
+    let known = list.concat(msgs, opt.pool)
+    if (type_hash(m, known) ?? "") != ""
+        list.push(out, "    test.assert_eq(str.len(${ty}.type_hash()), 71)")
+    if (service_type_hash(m, msgs, known) ?? "") != ""
+        list.push(out, "    test.assert_eq(str.len(${ty}.service_type_hash()), 71)")
+        let service = service_name_of(m)
+        list.push(out, "    let sn = ${ty}.service_type_name()")
+        list.push(out, "    test.assert_eq_str(sn, \"${service}\")")
+    out
+
 // The text of a test module for the messages of one package: for each
 // message, a round trip of its sample in both byte orders, the checks of
 // its names, and the refusal of a message with its last byte cut off.
@@ -1249,6 +1272,7 @@ pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
     list.push(out, "// truncated.")
     list.push(out, "")
     list.push(out, "use std.bytes")
+    list.push(out, "use std.str")
     list.push(out, "use std.test")
     list.push(out, "use cdr")
     list.push(out, "use cdrbytes")
@@ -1276,6 +1300,8 @@ pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
         list.push(out, "    test.assert_eq_str(tn, \"${m.type_name}\")")
         list.push(out, "    let dn = ${ty}.dds_type_name()")
         list.push(out, "    test.assert_eq_str(dn, \"${m.dds_name}\")")
+        for l in hash_checks(m, msgs, opt, ty)
+            list.push(out, l)
         list.push(out, "    for le in [true, false]")
         list.push(out, "        var w = writer(le)")
         list.push(out, "        test.assert_eq_str(cdr.status_name(m.encode(var w)), \"success\")")
@@ -1302,6 +1328,231 @@ pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
     str.join(out, "\n")
 
 // ---------------------------------------------------------------------
+// Type hashes.
+//
+// ROS 2 Iron and later identify a message type on the wire, in discovery,
+// by a hash of its description (REP 2011).  The description is the type's
+// name and fields, and the description of every type it contains,
+// directly or not.  It is written as JSON in a fixed order, with the
+// separators `, ` and `: `, without the default values, and the hash is
+// the SHA-256 of that text, in hexadecimal, after `RIHS01_`.
+//
+// A field's type is a number: the primitive's number, plus 48 for a fixed
+// array, 96 for a bounded sequence and 144 for an unbounded one.  A
+// `char` is the number of a `uint8`, as rosidl treats it.
+
+// The number of a type with no array around it: 1 for a nested message.
+fn base_type_id(t: TypeRef) -> Int
+    if t.prim == ""
+        return 1
+    if t.prim == "string"
+        if t.bound > 0
+            return 21
+        return 17
+    match t.prim
+        "int8"    => 2
+        "uint8"   => 3
+        "char"    => 3
+        "int16"   => 4
+        "uint16"  => 5
+        "int32"   => 6
+        "uint32"  => 7
+        "int64"   => 8
+        "uint64"  => 9
+        "float32" => 10
+        "float64" => 11
+        "bool"    => 15
+        _         => 16
+
+// What the array around a type adds to its number.
+fn shape_offset(shape: Int) -> Int
+    if shape == SHAPE_FIXED
+        return 48
+    if shape == SHAPE_BOUNDED
+        return 96
+    if shape == SHAPE_UNBOUNDED
+        return 144
+    0
+
+// The full name of a nested message type: `pkg/msg/Name`, or `pkg/srv/Name`
+// for the half of a service, whose names have the underscore a message
+// name cannot have.
+fn full_name(t: TypeRef) -> Str
+    if t.prim != ""
+        return ""
+    if str.contains(t.name, "_")
+        return "${t.pkg}/srv/${t.name}"
+    "${t.pkg}/msg/${t.name}"
+
+// One field of a description, as the hash sees it.
+fn field_json(f: Field) -> Str
+    let t = f.ty
+    var capacity = 0
+    if t.shape == SHAPE_FIXED or t.shape == SHAPE_BOUNDED
+        capacity = t.count
+    var string_capacity = 0
+    if t.prim == "string" and t.bound > 0
+        string_capacity = t.bound
+    let id = base_type_id(t) + shape_offset(t.shape)
+    "{\"name\": \"${f.name}\", \"type\": {\"type_id\": ${id}, \"capacity\": ${capacity}, \"string_capacity\": ${string_capacity}, \"nested_type_name\": \"${full_name(t)}\"}}"
+
+// The description of one type, without the types it contains.
+fn description_json(m: Message) -> Str
+    var fields: [Str] = []
+    for f in m.fields
+        list.push(fields, field_json(f))
+    "{\"type_name\": \"${m.type_name}\", \"fields\": [${str.join(fields, ", ")}]}"
+
+// The full names of the message types a message's fields hold.
+fn nested_names(m: Message) -> [Str]
+    var names: [Str] = []
+    for f in m.fields
+        let n = full_name(f.ty)
+        if n != ""
+            list.push(names, n)
+    names
+
+// The message of that full name among `known`.
+fn find_type(name: Str, known: [Message]) -> [Message]
+    var found: [Message] = []
+    for k in known
+        if k.type_name == name
+            list.push(found, k)
+    found
+
+// Every type a message contains, directly or through another, sorted by
+// name; or None if one of them is not among `known`.
+fn contained_types(m: Message, known: [Message]) -> ?[Message]
+    var queue = nested_names(m)
+    var seen: [Str] = []
+    var found: [Message] = []
+    var i = 0
+    while i < list.len(queue)
+        let name = queue[i]
+        i = i + 1
+        if not list.contains(seen, name)
+            list.push(seen, name)
+            let hit = find_type(name, known)
+            if list.len(hit) == 0
+                return None
+            list.push(found, hit[0])
+            for n in nested_names(hit[0])
+                list.push(queue, n)
+    var sorted: [Message] = []
+    var taken: [Bool] = []
+    for _ in found
+        list.push(taken, false)
+    for _ in found
+        var best = -1
+        for j in 0..list.len(found)
+            if not taken[j] and (best < 0 or found[j].type_name < found[best].type_name)
+                best = j
+        taken[best] = true
+        list.push(sorted, found[best])
+    Some(sorted)
+
+// The type hash of a message: `RIHS01_` and 64 hexadecimal digits, the
+// SHA-256 of its description and those of every type it contains.  The
+// types it contains are looked up in `known`; if one is missing there
+// is no hash to give and the answer is None.
+//
+// ```novo
+// use msggen
+//
+// fn main() [io]
+//     let m = msggen.parse_msg("std_msgs", "String", "string data\n")!
+//     println(msggen.type_hash(m, [m]) ?? "none")
+//     // RIHS01_df668c740482bbd48fb39d76a70dfd4bd59db1288021743503259e948f6b1a18
+// ```
+pub fn type_hash(m: Message, known: [Message]) -> ?Str
+    let contained = contained_types(m, known) ?? []
+    if list.len(contained) == 0 and list.len(nested_names(m)) > 0
+        return None
+    var descriptions: [Str] = []
+    for c in contained
+        list.push(descriptions, description_json(c))
+    let text = "{\"type_description\": ${description_json(m)}, \"referenced_type_descriptions\": [${str.join(descriptions, ", ")}]}"
+    Some("RIHS01_${crypto.sha256(text)}")
+
+// A nested-message field of the given name and shape.
+fn nested_field(name: Str, pkg: Str, type_name: Str, shape: Int, count: Int) -> Field
+    let t = TypeRef { prim: "", pkg: pkg, name: type_name, bound: -1, shape: shape, count: count }
+    Field { ty: t, name: name, has_default: false, defaults: [], doc: [] }
+
+// A message of the given parts and no constants.
+fn plain_message(pkg: Str, ros_name: Str, kind: Str, fields: [Field]) -> Message
+    Message { pkg: pkg, ros_name: ros_name, name: ros_name,
+        type_name: "${pkg}/${kind}/${ros_name}", dds_name: "", fields: fields, consts: [], doc: [] }
+
+// The service whose halves are `request` and `response`, and the event
+// message that goes with it, as messages of their own: ROS 2 hashes a
+// service as a message of three fields, each holding one of them.
+fn service_messages(request: Message, response: Message) -> [Message]
+    let base = str.slice(request.ros_name, 0, str.len(request.ros_name) - 8)
+    let pkg = request.pkg
+    let event = plain_message(pkg, "${base}_Event", "srv", [
+        nested_field("info", "service_msgs", "ServiceEventInfo", SHAPE_SCALAR, 0),
+        nested_field("request", pkg, request.ros_name, SHAPE_BOUNDED, 1),
+        nested_field("response", pkg, response.ros_name, SHAPE_BOUNDED, 1)])
+    let service = plain_message(pkg, base, "srv", [
+        nested_field("request_message", pkg, request.ros_name, SHAPE_SCALAR, 0),
+        nested_field("response_message", pkg, response.ros_name, SHAPE_SCALAR, 0),
+        nested_field("event_message", pkg, event.ros_name, SHAPE_SCALAR, 0)])
+    [service, event]
+
+// The message of a service half among `msgs`: the other half of the one
+// given, found by name.
+fn other_half(m: Message, suffix: Str, msgs: [Message]) -> [Message]
+    let base = str.slice(m.ros_name, 0, str.len(m.ros_name) - str.len(suffix))
+    find_type("${m.pkg}/srv/${base}_${suffix}", msgs)
+
+// The type hash of the service a half belongs to, or None.  `msgs` are
+// the messages of the half's package, and `known` every type available.
+pub fn service_type_hash(m: Message, msgs: [Message], known: [Message]) -> ?Str
+    if not str.contains(m.type_name, "/srv/")
+        return None
+    var halves = [m]
+    if str.ends_with(m.ros_name, "_Request")
+        halves = list.concat([m], other_half(m, "Response", msgs))
+    else
+        halves = list.concat(other_half(m, "Request", msgs), [m])
+    if list.len(halves) != 2
+        return None
+    let synthetic = service_messages(halves[0], halves[1])
+    type_hash(synthetic[0], list.concat(known, list.concat(synthetic, halves)))
+
+// The name of the service a half belongs to: `pkg/srv/Name`.
+fn service_name_of(m: Message) -> Str
+    var cut = 9
+    if str.ends_with(m.ros_name, "_Request")
+        cut = 8
+    "${m.pkg}/srv/${str.slice(m.ros_name, 0, str.len(m.ros_name) - cut)}"
+
+// The text of the methods that give a message's hashes, or nothing when
+// a type it contains is not available.
+fn hash_lines(m: Message, msgs: [Message], opt: GenOptions) -> [Str]
+    var out: [Str] = []
+    let known = list.concat(msgs, opt.pool)
+    let own = type_hash(m, known) ?? ""
+    if own != ""
+        list.push(out,
+            "    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).")
+        list.push(out, "    fn type_hash() -> Str")
+        list.push(out, "        \"${own}\"")
+        list.push(out, "")
+    let service = service_type_hash(m, msgs, known) ?? ""
+    if service != ""
+        list.push(out, "    // The name of the service this is half of.")
+        list.push(out, "    fn service_type_name() -> Str")
+        list.push(out, "        \"${service_name_of(m)}\"")
+        list.push(out, "")
+        list.push(out, "    // The hash of that service.")
+        list.push(out, "    fn service_type_hash() -> Str")
+        list.push(out, "        \"${service}\"")
+        list.push(out, "")
+    out
+
+// ---------------------------------------------------------------------
 // The command line.
 
 // What the program was asked to do.
@@ -1316,9 +1567,12 @@ pub struct Job
     files: [Str]
     // The file the test module is written to, or empty for none.
     tests_out: Str
+    // A directory of definitions, `<pkg>/msg/<Name>.msg`, where the types of other packages are
+    // read from for the type hashes, or empty for none.
+    include: Str
 
 // Read the arguments after the program name:
-// `--package P --out F [--tests F] [--string-cap N] [--seq-cap N] [--prefix X] file...`.
+// `--package P --out F [--tests F] [--include DIR] [--string-cap N] [--seq-cap N] [--prefix X] file...`.
 //
 // ```novo
 // use msggen
@@ -1332,7 +1586,10 @@ pub fn parse_args(args: [Str]) -> Result<Job, Str>
     var pkg = ""
     var out = ""
     var tests_out = ""
-    var opt = default_options()
+    var include = ""
+    var prefix = ""
+    var string_cap = 64
+    var seq_cap = 16
     var files: [Str] = []
     var i = 0
     while i < list.len(args)
@@ -1347,25 +1604,18 @@ pub fn parse_args(args: [Str]) -> Result<Job, Str>
                 out = v
             else if a == "--tests"
                 tests_out = v
+            else if a == "--include"
+                include = v
             else if a == "--prefix"
-                opt = GenOptions { string_cap: opt.string_cap,
-                    seq_cap: opt.seq_cap,
-                    prefix: v,
-                    sources: [] }
+                prefix = v
             else if a == "--string-cap" or a == "--seq-cap"
                 let n = str.to_int(v) ?? 0
                 if n < 1
                     return Err("${a} is a positive integer, not `${v}`")
                 if a == "--string-cap"
-                    opt = GenOptions { string_cap: n,
-                        seq_cap: opt.seq_cap,
-                        prefix: opt.prefix,
-                        sources: [] }
+                    string_cap = n
                 else
-                    opt = GenOptions { string_cap: opt.string_cap,
-                        seq_cap: n,
-                        prefix: opt.prefix,
-                        sources: [] }
+                    seq_cap = n
             else
                 return Err("unknown option ${a}")
             i = i + 2
@@ -1373,10 +1623,11 @@ pub fn parse_args(args: [Str]) -> Result<Job, Str>
             list.push(files, a)
             i = i + 1
     if pkg == "" or out == ""
-        return Err("usage: msggen --package P --out FILE [--tests FILE] [--string-cap N] [--seq-cap N] [--prefix X] DEFINITION...")
+        return Err("usage: msggen --package P --out FILE [--tests FILE] [--include DIR] [--string-cap N] [--seq-cap N] [--prefix X] DEFINITION...")
     if list.len(files) == 0
         return Err("no definition files")
-    Ok(Job { pkg: pkg, out: out, opt: opt, files: files, tests_out: tests_out })
+    let opt = GenOptions { string_cap: string_cap, seq_cap: seq_cap, prefix: prefix, sources: [], pool: [] }
+    Ok(Job { pkg: pkg, out: out, opt: opt, files: files, tests_out: tests_out, include: include })
 
 // The last component of a path.
 fn base_of(p: Str) -> Str
@@ -1431,21 +1682,68 @@ fn read_messages(job: Job, texts: [Str]) -> Result<([Message], [Str]), Str>
             return Err("${file}: a definition ends in .msg or .srv")
     Ok((msgs, names))
 
-// The job's options with the file names set as the sources.
-fn options_of(job: Job, names: [Str]) -> GenOptions
-    GenOptions { string_cap: job.opt.string_cap, seq_cap: job.opt.seq_cap,
-                 prefix: job.opt.prefix, sources: names }
+// The definition of a message of another package, read from the include
+// directory: the one message, or none if the file is not there or does not
+// parse.
+fn read_dependency(include: Str, pkg: Str, name: Str) -> [Message] [fs]
+    var found: [Message] = []
+    match fs.read("${include}/${pkg}/msg/${name}.msg")
+        None       => found
+        Some(text) =>
+            match parse_msg(pkg, name, text)
+                Ok(m)  =>
+                    list.push(found, m)
+                    found
+                Err(_) => found
+
+// The messages of other packages that `msgs` contain, directly or
+// through each other, read from the include directory.  A service needs
+// `service_msgs/msg/ServiceEventInfo` as well, for its event message.
+fn load_pool(include: Str, msgs: [Message]) -> [Message] [fs]
+    var pool: [Message] = []
+    if include == ""
+        return pool
+    var wanted: [Str] = []
+    for m in msgs
+        for n in nested_names(m)
+            list.push(wanted, n)
+        if str.contains(m.type_name, "/srv/")
+            list.push(wanted, "service_msgs/msg/ServiceEventInfo")
+    var i = 0
+    while i < list.len(wanted)
+        let parts = str.split(wanted[i], "/")
+        i = i + 1
+        if parts[1] == "msg" and list.len(find_type(wanted[i - 1], msgs)) + list.len(find_type(wanted[i - 1], pool)) == 0
+            for dep in read_dependency(include, parts[0], parts[2])
+                list.push(pool, dep)
+                for n in nested_names(dep)
+                    list.push(wanted, n)
+    pool
+
+// What a job's definitions come to: the messages, and the options with
+// the file names and the types of other packages filled in.
+struct Prepared
+    msgs: [Message]
+    opt: GenOptions
+
+// Read the definitions of a job and the types they contain.
+fn prepare(job: Job, texts: [Str]) -> Result<Prepared, Str> [fs]
+    let read = read_messages(job, texts)!
+    let pool = load_pool(job.include, read.0)
+    let opt = GenOptions { string_cap: job.opt.string_cap, seq_cap: job.opt.seq_cap,
+        prefix: job.opt.prefix, sources: read.1, pool: pool }
+    Ok(Prepared { msgs: read.0, opt: opt })
 
 // Build the module a job asks for, given the text of each of its files
 // in the order the job lists them.
-pub fn build_module(job: Job, texts: [Str]) -> Result<Str, Str>
-    let read = read_messages(job, texts)!
-    generate(job.pkg, read.0, options_of(job, read.1))
+pub fn build_module(job: Job, texts: [Str]) -> Result<Str, Str> [fs]
+    let p = prepare(job, texts)!
+    generate(job.pkg, p.msgs, p.opt)
 
 // Build the test module that goes with it.
-pub fn build_tests(job: Job, texts: [Str]) -> Result<Str, Str>
-    let read = read_messages(job, texts)!
-    Ok(generate_tests(job.pkg, read.0, options_of(job, read.1)))
+pub fn build_tests(job: Job, texts: [Str]) -> Result<Str, Str> [fs]
+    let p = prepare(job, texts)!
+    Ok(generate_tests(job.pkg, p.msgs, p.opt))
 
 // Print a failure and answer the exit status for it.
 fn report(why: Str) -> Int [io]
@@ -1474,18 +1772,17 @@ pub fn run(args: [Str]) -> Int [io, fs]
             Some(t) => list.push(texts, t)
             None    =>
                 return report("cannot read ${f}")
-    let read = match read_messages(job, texts)
+    let p = match prepare(job, texts)
         Err(e) =>
             return report(e)
         Ok(r)  => r
-    let opt = options_of(job, read.1)
-    let module = match generate(job.pkg, read.0, opt)
+    let module = match generate(job.pkg, p.msgs, p.opt)
         // cov: skip — generate refuses a package name and a capacity that parse_args and read_messages have already accepted
         Err(e) =>
             return report(e)
         Ok(t)  => t
     if not fs.write(job.out, module)
         return report("cannot write ${job.out}")
-    if job.tests_out != "" and not fs.write(job.tests_out, generate_tests(job.pkg, read.0, opt))
+    if job.tests_out != "" and not fs.write(job.tests_out, generate_tests(job.pkg, p.msgs, p.opt))
         return report("cannot write ${job.tests_out}")
     0

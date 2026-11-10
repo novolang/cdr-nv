@@ -26,10 +26,23 @@ LIST="${1:-}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/cdr-nv-cov.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
+# The suites run one after another.  They all write the package's own
+# coverage manifest under _novo/, so two at once overwrite each other's
+# counts.  COV_TIMEOUT is the seconds allowed to each (default 3600).
+run_suite() {
+  local base="$1"
+  # COV_REUSE=1 keeps the LCOV file a suite already wrote, to finish a run
+  # that one slow suite ended; the default measures every suite afresh.
+  if [ "${COV_REUSE:-0}" = 1 ] && [ -f "$PKG/_novo/$base.lcov.info" ]; then return; fi
+  rm -f "$PKG/_novo/$base.lcov.info"
+  ( cd "$PKG" && NOVO_LEAK_CHECK=0 timeout "${COV_TIMEOUT:-3600}" "$NOVO" test "tests/$base.nv" \
+      --cov --report=lcov ) >"$WORK/$base.log" 2>&1
+}
+for suite in "$PKG"/tests/*_tests.nv; do
+  run_suite "$(basename "$suite" .nv)"
+done
 for suite in "$PKG"/tests/*_tests.nv; do
   base="$(basename "$suite" .nv)"
-  ( cd "$PKG" && NOVO_LEAK_CHECK=0 timeout 1800 "$NOVO" test "tests/$base.nv" \
-      --cov --report=lcov ) >"$WORK/$base.log" 2>&1
   if [ -f "$PKG/_novo/$base.lcov.info" ]; then
     cp "$PKG/_novo/$base.lcov.info" "$WORK/"
   else

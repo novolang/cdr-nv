@@ -1,0 +1,103 @@
+// hashes_tests.nv — the type hashes msggen computes are the ones ROS 2
+// Jazzy installs.
+//
+// `jazzy_type_hashes.tsv` holds, for every message and service in
+// `src/interfaces/`, the hash read from the `.json` file the distribution
+// installs beside the definition (its header says which).  This file
+// reads the same definitions with msggen, computes the hash of each from
+// the description alone, and compares: the 71 characters must match.  The
+// table comes from the distribution and the computation from the
+// definitions, so they agree only if the rules of REP 2011 are the ones
+// implemented.
+//
+// A service has three rows: the service itself, whose description
+// contains the event message ROS 2 adds, and its request and response.
+
+use std.fs
+use std.str
+use std.test
+use msggen
+
+fn files_in(dir: Str) -> [Str]
+    var out: [Str] = []
+    if fs.is_dir(dir)
+        for name in fs.read_dir(dir)
+            list.push(out, name)
+    out
+
+// Every message of a package in `src/interfaces/`, a service as its two halves.
+fn load(pkg: Str) -> [Message] [fs]
+    var all: [Message] = []
+    for name in files_in("src/interfaces/${pkg}/msg")
+        let text = fs.read("src/interfaces/${pkg}/msg/${name}") ?? ""
+        match msggen.parse_msg(pkg, str.slice(name, 0, str.len(name) - 4), text)
+            Ok(m)  => list.push(all, m)
+            Err(e) => test.fail(e)
+    for name in files_in("src/interfaces/${pkg}/srv")
+        let text = fs.read("src/interfaces/${pkg}/srv/${name}") ?? ""
+        match msggen.parse_srv(pkg, str.slice(name, 0, str.len(name) - 4), text)
+            Ok(pair) =>
+                list.push(all, pair[0])
+                list.push(all, pair[1])
+            Err(e)   => test.fail(e)
+    all
+
+fn load_everything() -> [Message] [fs]
+    var all: [Message] = []
+    for pkg in ["builtin_interfaces", "std_msgs", "geometry_msgs", "sensor_msgs", "rcl_interfaces",
+                "std_srvs", "service_msgs"]
+        for m in load(pkg)
+            list.push(all, m)
+    all
+
+// The hash msggen gives the type of that full name.
+fn computed(name: Str, all: [Message]) -> Str
+    if str.contains(name, "/msg/")
+        for m in all
+            if m.type_name == name
+                return msggen.type_hash(m, all) ?? "none"
+        return "no such message"
+    // A service: its request half stands for it.
+    for m in all
+        if m.type_name == "${name}_Request"
+            return msggen.service_type_hash(m, all, all) ?? "none"
+    // A request or a response is a message.
+    for m in all
+        if m.type_name == name
+            return msggen.type_hash(m, all) ?? "none"
+    "no such type"
+
+@test
+fn test_every_hash_matches_the_distribution() [io, fs]
+    let all = load_everything()
+    let rows = fs.read("tests/jazzy_type_hashes.tsv") ?? ""
+    var checked = 0
+    for line in str.split(rows, "\n")
+        if str.len(line) > 0 and not str.starts_with(line, "#")
+            let cols = str.split(line, "\t")
+            test.assert_eq_str(computed(cols[0], all), cols[1])
+            checked = checked + 1
+    test.assert_eq(checked, 115)
+
+// The hash of the simplest message, written out in the REP 2011 example
+// and installed with std_msgs.
+@test
+fn test_the_string_message() [io]
+    let m = msggen.parse_msg("std_msgs", "String", "string data\n")!
+    test.assert_eq_str(msggen.type_hash(m, [m]) ?? "none",
+        "RIHS01_df668c740482bbd48fb39d76a70dfd4bd59db1288021743503259e948f6b1a18")
+
+// A message that contains a type the hash cannot see has no hash.
+@test
+fn test_a_missing_type_has_no_hash() [io]
+    let m = msggen.parse_msg("p", "M", "q/Other x\n")!
+    test.assert_eq_str(msggen.type_hash(m, [m]) ?? "none", "none")
+    let ok = msggen.parse_msg("p", "N", "int32 x\n")!
+    test.assert(str.starts_with(msggen.type_hash(ok, [ok]) ?? "", "RIHS01_"))
+    test.assert_eq_str(msggen.service_type_hash(ok, [ok], [ok]) ?? "none", "none")
+    // A half whose other half is absent has no service hash.
+    let halves = msggen.parse_srv("p", "S", "int32 a\n---\nint32 b\n")!
+    test.assert_eq_str(msggen.service_type_hash(halves[0], [halves[0]], halves) ?? "none", "none")
+    test.assert_eq_str(msggen.service_type_hash(halves[1], [halves[1]], halves) ?? "none", "none")
+    // Both halves, but no ServiceEventInfo to describe the event with.
+    test.assert_eq_str(msggen.service_type_hash(halves[0], halves, halves) ?? "none", "none")

@@ -8,6 +8,7 @@
 // truncated.
 
 use std.bytes
+use std.str
 use std.test
 use cdr
 use cdrbytes
@@ -33,6 +34,7 @@ fn test_sensor_msgs_Imu() [io]
     test.assert_eq_str(tn, "sensor_msgs/msg/Imu")
     let dn = sensor_msgs.Imu.dds_type_name()
     test.assert_eq_str(dn, "sensor_msgs::msg::dds_::Imu_")
+    test.assert_eq(str.len(sensor_msgs.Imu.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -62,6 +64,7 @@ fn test_sensor_msgs_NavSatStatus() [io]
     test.assert_eq_str(tn, "sensor_msgs/msg/NavSatStatus")
     let dn = sensor_msgs.NavSatStatus.dds_type_name()
     test.assert_eq_str(dn, "sensor_msgs::msg::dds_::NavSatStatus_")
+    test.assert_eq(str.len(sensor_msgs.NavSatStatus.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -91,6 +94,7 @@ fn test_sensor_msgs_Temperature() [io]
     test.assert_eq_str(tn, "sensor_msgs/msg/Temperature")
     let dn = sensor_msgs.Temperature.dds_type_name()
     test.assert_eq_str(dn, "sensor_msgs::msg::dds_::Temperature_")
+    test.assert_eq(str.len(sensor_msgs.Temperature.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")

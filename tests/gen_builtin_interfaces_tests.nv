@@ -8,6 +8,7 @@
 // truncated.
 
 use std.bytes
+use std.str
 use std.test
 use cdr
 use cdrbytes
@@ -33,6 +34,7 @@ fn test_builtin_interfaces_Duration() [io]
     test.assert_eq_str(tn, "builtin_interfaces/msg/Duration")
     let dn = builtin_interfaces.DurationMsg.dds_type_name()
     test.assert_eq_str(dn, "builtin_interfaces::msg::dds_::Duration_")
+    test.assert_eq(str.len(builtin_interfaces.DurationMsg.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -62,6 +64,7 @@ fn test_builtin_interfaces_Time() [io]
     test.assert_eq_str(tn, "builtin_interfaces/msg/Time")
     let dn = builtin_interfaces.Time.dds_type_name()
     test.assert_eq_str(dn, "builtin_interfaces::msg::dds_::Time_")
+    test.assert_eq(str.len(builtin_interfaces.Time.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")

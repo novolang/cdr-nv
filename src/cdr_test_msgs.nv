@@ -121,6 +121,10 @@ impl Everything
     fn dds_type_name() -> Str
         "cdr_test_msgs::msg::dds_::Everything_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_77b829493cc4cd1e371dc2e4852c8e422863f1cb710bded185c867eaa0de3ede"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Everything
         Everything {
@@ -237,6 +241,10 @@ impl Inner
     fn dds_type_name() -> Str
         "cdr_test_msgs::msg::dds_::Inner_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_f99e02cddfe4ad9572a0b1b5bc118d308238b4c5ce719e6f4e342dfceebe5bc0"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Inner
         Inner {
@@ -296,6 +304,10 @@ impl Nothing
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "cdr_test_msgs::msg::dds_::Nothing_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_6cb25504a9a7a7c0d20e5534375e388a7f91f881bc32c4c0354e0e394694e7fe"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Nothing
@@ -421,6 +433,10 @@ impl Shapes
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "cdr_test_msgs::msg::dds_::Shapes_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_7320b4d206a888fb8b149f5c12e3842cf6274c5d2e2c91da449a25022587d1b9"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Shapes

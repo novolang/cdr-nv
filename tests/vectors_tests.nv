@@ -39,6 +39,12 @@ fn s64(t: Str) -> String[64]
     let _ = s.push_str(t)
     s
 
+// A string of the capacity the generated rcl_interfaces gives one.
+fn s32(t: Str) -> String[32]
+    var s: String[32] = String.new()
+    let _ = s.push_str(t)
+    s
+
 // The writer's bytes as lowercase hex.
 fn hex_of(w: cdr.Writer) -> Str
     bytes.to_hex(cdrbytes.to_bytes(w))
@@ -237,10 +243,10 @@ fn test_bounded_sequence() [io]
     var ranges: Vec[FloatingPointRange; 1] = Vec.new()
     let _ = ranges.push(rcl_interfaces.FloatingPointRange { from_value: 0.0, to_value: 10.0, step: 0.5 })
     let m = rcl_interfaces.ParameterDescriptor {
-        name: s64("p"),
+        name: s32("p"),
         type_: 3 as u8,
-        description: s64(""),
-        additional_constraints: s64(""),
+        description: s32(""),
+        additional_constraints: s32(""),
         read_only: false,
         dynamic_typing: false,
         floating_point_range: ranges,

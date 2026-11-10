@@ -42,12 +42,17 @@ allocates, so the module builds for a microcontroller with no heap allocator.
 
 `msggen` is a generator. It reads a ROS 2 `.msg` or `.srv` definition and
 writes a module with one `@value` struct per message. Each struct has `new`,
-`encode`, `decode` and `decode_into`, and the ROS 2 type name.
+`encode`, `decode` and `decode_into`, the ROS 2 type name and the type hash.
 
-The modules it has already written are bundled:
-`builtin_interfaces`, `std_msgs`, `geometry_msgs`, a subset of `sensor_msgs` and
-of `rcl_interfaces`, `example_interfaces`'s `AddTwoInts` and `std_srvs`, each
-with its definition files in `src/interfaces/`.
+The modules it has already written are bundled: `builtin_interfaces`,
+`std_msgs`, `geometry_msgs`, `rcl_interfaces`, `std_srvs`, `service_msgs` and a
+subset of `sensor_msgs`. **The definitions under `src/interfaces/` are the
+files of the ROS 2 Jazzy distribution**, copied from
+`/opt/ros/jazzy/share/<package>/{msg,srv}/` as installed with
+`std_msgs` 5.3.8 (the version in that package's `package.xml`), and not
+written from the documentation. The generated modules are those definitions
+run through `msggen`, and `tests/hashes_tests.nv` checks that they carry the
+type hashes the distribution installed.
 
 **A message that does not fit is a value, not a crash.** A writer whose buffer
 is full, a reader that reaches the end of its bytes, a string longer than the
@@ -100,9 +105,11 @@ fn main() [io]
 | `cdr` | The `Writer` and the `Reader`, the `Status` they record, and the calls that write and read each primitive, a string and a sequence count. Builds for the embedded tier. |
 | `cdrbytes` | The writer's bytes as a `Bytes`, and a reader over a `Bytes`. Host only, because the embedded runtime has no `Bytes`. |
 | `msggen` | The definition parser and the module generator, as functions from text to text, and the program's entry `run`. Host only. |
-| `builtin_interfaces`, `std_msgs`, `geometry_msgs` | 2, 30 and 29 messages, written from the Jazzy documentation. `geometry_msgs/VelocityStamped` is left out because its field list could not be confirmed. |
-| `sensor_msgs`, `rcl_interfaces` | Three messages (`Imu`, `NavSatStatus`, `Temperature`) and five (`FloatingPointRange`, `IntegerRange`, `ParameterDescriptor`, `ParameterType`, `ParameterValue`). They hold the bounded sequences, the constants and the nine-element arrays the tests need. |
-| `example_interfaces`, `std_srvs` | One service, `AddTwoInts`, and three, `Empty`, `SetBool` and `Trigger`. Each service is a `...Request` struct and a `...Response` struct. |
+| `builtin_interfaces`, `std_msgs`, `geometry_msgs` | Every message of those packages in Jazzy: 2, 30 and 33. |
+| `rcl_interfaces` | Every message (13) and every service (8) of the package, which has the bounded sequences, the constants and the defaults. |
+| `std_srvs` | The three services, `Empty`, `SetBool` and `Trigger`. A service is a `...Request` struct and a `...Response` struct. |
+| `service_msgs` | `ServiceEventInfo`, which the hash of every service contains. |
+| `sensor_msgs` | Three messages (`Imu`, `NavSatStatus`, `Temperature`), for the nine-element arrays and the constants. The package has 28 more. |
 | `cdr_test_msgs` | Not a ROS package. Three messages that carry every primitive, every field shape and no field at all, so the generator's rare output is compiled and tested like the rest. |
 
 ## How to choose an entry point
@@ -120,14 +127,16 @@ ROS package:
 
 ```
 novo run examples/msggen_cli.nv -- --package my_msgs --out src/my_msgs.nv \
-    --string-cap 32 --seq-cap 8 \
+    --string-cap 32 --seq-cap 8 --include src/interfaces \
     my_msgs/msg/Reading.msg my_msgs/srv/Calibrate.srv
 ```
 
 `--string-cap` and `--seq-cap` set the size of a string and of a sequence that
 the definition leaves unbounded. `--prefix` is the module path the other
 packages' modules are found under, empty when they sit beside the generated
-one. `--tests FILE` also writes a test module
+one. `--include DIR` is where the definitions of other packages are read from, as
+`DIR/<package>/msg/<Name>.msg`, so that a message that contains them gets its
+type hash. `--tests FILE` also writes a test module
 that round-trips every message. `scripts/regen.sh` runs the generator over every
 bundled set.
 
@@ -175,11 +184,20 @@ bundled set.
     named `structure_needs_at_least_one_member`, because `rosidl` adds one.
 14. **`byte`, `char` and `uint8` are all a `u8`.** Each is one byte and none is
     padded.
-15. **A service is two structs.** `AddTwoInts.srv` is `AddTwoIntsRequest` and
-    `AddTwoIntsResponse`, with the type names
-    `example_interfaces/srv/AddTwoInts_Request` and `..._Response`. Each is
-    the payload only. Whatever the middleware adds to match a reply to its
-    request is not written.
+15. **A service is two structs.** `std_srvs`'s `SetBool.srv` is `SetBoolRequest`
+    and `SetBoolResponse`, with the type names `std_srvs/srv/SetBool_Request`
+    and `..._Response`. Each is the payload only. Whatever the middleware adds
+    to match a reply to its request is not written.
+16. **The type hash is `RIHS01_` and 64 digits.** `type_hash()` is the hash of
+    the message, and a service's two structs also have `service_type_name()` and
+    `service_type_hash()`. Each is the SHA-256 of the description of the type
+    and of every type it contains, as REP 2011 specifies: the JSON of
+    names, field type numbers, capacities and nested type names, with the
+    separators `, ` and `: `, and without default values. `char` is the type
+    number of `uint8`. A message is given a hash only if every type it
+    contains was found: types of another package are read from the directory
+    named by `--include`, and a message with a type that was not found has no
+    hash method at all.
 
 ## Running on a microcontroller
 
@@ -214,13 +232,6 @@ part with 64 KB of RAM, declare one of each and reuse them.
   headers and parameter lists for appendable and mutable types. Messages from
   ROS 2 Jazzy's default middleware are version 1. A header that names version
   2 or a parameter list is refused as `BadHeader`.
-- **The type hash.** Iron and later put a SHA-256 over a JSON description of
-  the message and of every type in it on the wire, in discovery. The
-  description's canonical form has to match the C++ generator's byte for byte,
-  and there is no ROS 2 installation on the machine this package was written
-  on to compare against. A hash that was never compared is worse than none, so
-  it is left out. The type names, `std_msgs/msg/String` and
-  `std_msgs::msg::dds_::String_`, are generated.
 - **`.action` files.** An action is five topics and two services, and a package
   of its own.
 - **A message larger than 1,024 bytes.** See rule 6. The constant is in `cdr.nv`;
@@ -268,6 +279,12 @@ byte cut off must be refused as truncated.
 `tests/interfaces_current_tests.nv` generates every bundled module again and
 compares it with the file on disk, so a change to the generator or to a
 definition that was not followed by `scripts/regen.sh` fails.
+
+`tests/hashes_tests.nv` computes the type hash of every bundled message and
+service from its definition and compares it with the one the Jazzy
+distribution installed in the `.json` file beside the definition, 115 of 115.
+The expected values are in `tests/jazzy_type_hashes.tsv`, which says where
+each came from.
 
 `tests/embedded_probe.nv` is the microcontroller program described above.
 `tests/coverage.sh` merges the line coverage of the suites over `src/`.

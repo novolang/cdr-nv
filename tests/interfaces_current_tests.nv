@@ -45,12 +45,20 @@ fn texts_of(files: [Str]) -> [Str]
 fn job_of(pkg: Str) -> msggen.Job
     let files = definitions(pkg)
     var args = ["--package", pkg, "--out", "src/${pkg}.nv",
-                "--tests", "tests/gen_${pkg}_tests.nv"]
+                "--tests", "tests/gen_${pkg}_tests.nv", "--include", "src/interfaces"]
+    // The capacities scripts/regen.sh gives this package.
+    if pkg == "rcl_interfaces"
+        args = list.concat(args, ["--string-cap", "32", "--seq-cap", "4"])
     for f in files
         list.push(args, f)
     match msggen.parse_args(args)
         Ok(j)  => j
-        Err(_) => msggen.Job { pkg: pkg, out: "", opt: msggen.default_options(), files: [], tests_out: "" }
+        Err(_) => msggen.Job { pkg: pkg,
+            out: "",
+            opt: msggen.default_options(),
+            files: [],
+            tests_out: "",
+            include: "" }
 
 fn check(pkg: Str) [io, fs]
     let job = job_of(pkg)
@@ -82,10 +90,6 @@ fn test_sensor_msgs_current() [io, fs]
 @test
 fn test_rcl_interfaces_current() [io, fs]
     check("rcl_interfaces")
-
-@test
-fn test_example_interfaces_current() [io, fs]
-    check("example_interfaces")
 
 @test
 fn test_std_srvs_current() [io, fs]

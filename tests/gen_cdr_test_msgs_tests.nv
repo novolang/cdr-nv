@@ -8,6 +8,7 @@
 // truncated.
 
 use std.bytes
+use std.str
 use std.test
 use cdr
 use cdrbytes
@@ -33,6 +34,7 @@ fn test_cdr_test_msgs_Everything() [io]
     test.assert_eq_str(tn, "cdr_test_msgs/msg/Everything")
     let dn = cdr_test_msgs.Everything.dds_type_name()
     test.assert_eq_str(dn, "cdr_test_msgs::msg::dds_::Everything_")
+    test.assert_eq(str.len(cdr_test_msgs.Everything.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -62,6 +64,7 @@ fn test_cdr_test_msgs_Inner() [io]
     test.assert_eq_str(tn, "cdr_test_msgs/msg/Inner")
     let dn = cdr_test_msgs.Inner.dds_type_name()
     test.assert_eq_str(dn, "cdr_test_msgs::msg::dds_::Inner_")
+    test.assert_eq(str.len(cdr_test_msgs.Inner.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -91,6 +94,7 @@ fn test_cdr_test_msgs_Nothing() [io]
     test.assert_eq_str(tn, "cdr_test_msgs/msg/Nothing")
     let dn = cdr_test_msgs.Nothing.dds_type_name()
     test.assert_eq_str(dn, "cdr_test_msgs::msg::dds_::Nothing_")
+    test.assert_eq(str.len(cdr_test_msgs.Nothing.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -120,6 +124,7 @@ fn test_cdr_test_msgs_Shapes() [io]
     test.assert_eq_str(tn, "cdr_test_msgs/msg/Shapes")
     let dn = cdr_test_msgs.Shapes.dds_type_name()
     test.assert_eq_str(dn, "cdr_test_msgs::msg::dds_::Shapes_")
+    test.assert_eq(str.len(cdr_test_msgs.Shapes.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")

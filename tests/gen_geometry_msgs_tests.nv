@@ -8,6 +8,7 @@
 // truncated.
 
 use std.bytes
+use std.str
 use std.test
 use cdr
 use cdrbytes
@@ -33,6 +34,7 @@ fn test_geometry_msgs_Accel() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Accel")
     let dn = geometry_msgs.Accel.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Accel_")
+    test.assert_eq(str.len(geometry_msgs.Accel.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -62,6 +64,7 @@ fn test_geometry_msgs_AccelStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/AccelStamped")
     let dn = geometry_msgs.AccelStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::AccelStamped_")
+    test.assert_eq(str.len(geometry_msgs.AccelStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -91,6 +94,7 @@ fn test_geometry_msgs_AccelWithCovariance() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/AccelWithCovariance")
     let dn = geometry_msgs.AccelWithCovariance.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::AccelWithCovariance_")
+    test.assert_eq(str.len(geometry_msgs.AccelWithCovariance.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -120,6 +124,7 @@ fn test_geometry_msgs_AccelWithCovarianceStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/AccelWithCovarianceStamped")
     let dn = geometry_msgs.AccelWithCovarianceStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::AccelWithCovarianceStamped_")
+    test.assert_eq(str.len(geometry_msgs.AccelWithCovarianceStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -149,6 +154,7 @@ fn test_geometry_msgs_Inertia() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Inertia")
     let dn = geometry_msgs.Inertia.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Inertia_")
+    test.assert_eq(str.len(geometry_msgs.Inertia.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -178,6 +184,7 @@ fn test_geometry_msgs_InertiaStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/InertiaStamped")
     let dn = geometry_msgs.InertiaStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::InertiaStamped_")
+    test.assert_eq(str.len(geometry_msgs.InertiaStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -207,6 +214,7 @@ fn test_geometry_msgs_Point() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Point")
     let dn = geometry_msgs.Point.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Point_")
+    test.assert_eq(str.len(geometry_msgs.Point.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -236,6 +244,7 @@ fn test_geometry_msgs_Point32() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Point32")
     let dn = geometry_msgs.Point32.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Point32_")
+    test.assert_eq(str.len(geometry_msgs.Point32.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -265,6 +274,7 @@ fn test_geometry_msgs_PointStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/PointStamped")
     let dn = geometry_msgs.PointStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::PointStamped_")
+    test.assert_eq(str.len(geometry_msgs.PointStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -294,6 +304,7 @@ fn test_geometry_msgs_Polygon() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Polygon")
     let dn = geometry_msgs.Polygon.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Polygon_")
+    test.assert_eq(str.len(geometry_msgs.Polygon.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -317,12 +328,73 @@ fn test_geometry_msgs_Polygon() [io]
             None    => test.assert_eq_str(cdr.status_name(r3.result()), "truncated")
 
 @test
+fn test_geometry_msgs_PolygonInstance() [io]
+    let m = geometry_msgs.PolygonInstance.sample()
+    let tn = geometry_msgs.PolygonInstance.type_name()
+    test.assert_eq_str(tn, "geometry_msgs/msg/PolygonInstance")
+    let dn = geometry_msgs.PolygonInstance.dds_type_name()
+    test.assert_eq_str(dn, "geometry_msgs::msg::dds_::PolygonInstance_")
+    test.assert_eq(str.len(geometry_msgs.PolygonInstance.type_hash()), 71)
+    for le in [true, false]
+        var w = writer(le)
+        test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
+        var r = reader_of(w, 0)
+        var back = geometry_msgs.PolygonInstance.new()
+        test.assert_eq_str(cdr.status_name(back.decode_into(var r)), "success")
+        test.assert_eq(r.remaining(), 0)
+        var w2 = writer(le)
+        test.assert_eq_str(cdr.status_name(back.encode(var w2)), "success")
+        test.assert_eq_str(hex_of(w2), hex_of(w))
+        var r2 = reader_of(w, 0)
+        match geometry_msgs.PolygonInstance.decode(var r2)
+            Some(x) =>
+                var w3 = writer(le)
+                let _ = x.encode(var w3)
+                test.assert_eq_str(hex_of(w3), hex_of(w))
+            None    => test.fail("a whole message did not decode")
+        var r3 = reader_of(w, 1)
+        match geometry_msgs.PolygonInstance.decode(var r3)
+            Some(_) => test.fail("a truncated message decoded")
+            None    => test.assert_eq_str(cdr.status_name(r3.result()), "truncated")
+
+@test
+fn test_geometry_msgs_PolygonInstanceStamped() [io]
+    let m = geometry_msgs.PolygonInstanceStamped.sample()
+    let tn = geometry_msgs.PolygonInstanceStamped.type_name()
+    test.assert_eq_str(tn, "geometry_msgs/msg/PolygonInstanceStamped")
+    let dn = geometry_msgs.PolygonInstanceStamped.dds_type_name()
+    test.assert_eq_str(dn, "geometry_msgs::msg::dds_::PolygonInstanceStamped_")
+    test.assert_eq(str.len(geometry_msgs.PolygonInstanceStamped.type_hash()), 71)
+    for le in [true, false]
+        var w = writer(le)
+        test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
+        var r = reader_of(w, 0)
+        var back = geometry_msgs.PolygonInstanceStamped.new()
+        test.assert_eq_str(cdr.status_name(back.decode_into(var r)), "success")
+        test.assert_eq(r.remaining(), 0)
+        var w2 = writer(le)
+        test.assert_eq_str(cdr.status_name(back.encode(var w2)), "success")
+        test.assert_eq_str(hex_of(w2), hex_of(w))
+        var r2 = reader_of(w, 0)
+        match geometry_msgs.PolygonInstanceStamped.decode(var r2)
+            Some(x) =>
+                var w3 = writer(le)
+                let _ = x.encode(var w3)
+                test.assert_eq_str(hex_of(w3), hex_of(w))
+            None    => test.fail("a whole message did not decode")
+        var r3 = reader_of(w, 1)
+        match geometry_msgs.PolygonInstanceStamped.decode(var r3)
+            Some(_) => test.fail("a truncated message decoded")
+            None    => test.assert_eq_str(cdr.status_name(r3.result()), "truncated")
+
+@test
 fn test_geometry_msgs_PolygonStamped() [io]
     let m = geometry_msgs.PolygonStamped.sample()
     let tn = geometry_msgs.PolygonStamped.type_name()
     test.assert_eq_str(tn, "geometry_msgs/msg/PolygonStamped")
     let dn = geometry_msgs.PolygonStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::PolygonStamped_")
+    test.assert_eq(str.len(geometry_msgs.PolygonStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -352,6 +424,7 @@ fn test_geometry_msgs_Pose() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Pose")
     let dn = geometry_msgs.Pose.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Pose_")
+    test.assert_eq(str.len(geometry_msgs.Pose.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -381,6 +454,7 @@ fn test_geometry_msgs_Pose2D() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Pose2D")
     let dn = geometry_msgs.Pose2D.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Pose2D_")
+    test.assert_eq(str.len(geometry_msgs.Pose2D.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -410,6 +484,7 @@ fn test_geometry_msgs_PoseArray() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/PoseArray")
     let dn = geometry_msgs.PoseArray.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::PoseArray_")
+    test.assert_eq(str.len(geometry_msgs.PoseArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -439,6 +514,7 @@ fn test_geometry_msgs_PoseStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/PoseStamped")
     let dn = geometry_msgs.PoseStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::PoseStamped_")
+    test.assert_eq(str.len(geometry_msgs.PoseStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -468,6 +544,7 @@ fn test_geometry_msgs_PoseWithCovariance() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/PoseWithCovariance")
     let dn = geometry_msgs.PoseWithCovariance.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::PoseWithCovariance_")
+    test.assert_eq(str.len(geometry_msgs.PoseWithCovariance.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -497,6 +574,7 @@ fn test_geometry_msgs_PoseWithCovarianceStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/PoseWithCovarianceStamped")
     let dn = geometry_msgs.PoseWithCovarianceStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::PoseWithCovarianceStamped_")
+    test.assert_eq(str.len(geometry_msgs.PoseWithCovarianceStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -526,6 +604,7 @@ fn test_geometry_msgs_Quaternion() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Quaternion")
     let dn = geometry_msgs.Quaternion.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Quaternion_")
+    test.assert_eq(str.len(geometry_msgs.Quaternion.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -555,6 +634,7 @@ fn test_geometry_msgs_QuaternionStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/QuaternionStamped")
     let dn = geometry_msgs.QuaternionStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::QuaternionStamped_")
+    test.assert_eq(str.len(geometry_msgs.QuaternionStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -584,6 +664,7 @@ fn test_geometry_msgs_Transform() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Transform")
     let dn = geometry_msgs.Transform.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Transform_")
+    test.assert_eq(str.len(geometry_msgs.Transform.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -613,6 +694,7 @@ fn test_geometry_msgs_TransformStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/TransformStamped")
     let dn = geometry_msgs.TransformStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::TransformStamped_")
+    test.assert_eq(str.len(geometry_msgs.TransformStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -642,6 +724,7 @@ fn test_geometry_msgs_Twist() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Twist")
     let dn = geometry_msgs.Twist.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Twist_")
+    test.assert_eq(str.len(geometry_msgs.Twist.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -671,6 +754,7 @@ fn test_geometry_msgs_TwistStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/TwistStamped")
     let dn = geometry_msgs.TwistStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::TwistStamped_")
+    test.assert_eq(str.len(geometry_msgs.TwistStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -700,6 +784,7 @@ fn test_geometry_msgs_TwistWithCovariance() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/TwistWithCovariance")
     let dn = geometry_msgs.TwistWithCovariance.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::TwistWithCovariance_")
+    test.assert_eq(str.len(geometry_msgs.TwistWithCovariance.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -729,6 +814,7 @@ fn test_geometry_msgs_TwistWithCovarianceStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/TwistWithCovarianceStamped")
     let dn = geometry_msgs.TwistWithCovarianceStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::TwistWithCovarianceStamped_")
+    test.assert_eq(str.len(geometry_msgs.TwistWithCovarianceStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -758,6 +844,7 @@ fn test_geometry_msgs_Vector3() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Vector3")
     let dn = geometry_msgs.Vector3.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Vector3_")
+    test.assert_eq(str.len(geometry_msgs.Vector3.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -787,6 +874,7 @@ fn test_geometry_msgs_Vector3Stamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/Vector3Stamped")
     let dn = geometry_msgs.Vector3Stamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Vector3Stamped_")
+    test.assert_eq(str.len(geometry_msgs.Vector3Stamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -810,12 +898,73 @@ fn test_geometry_msgs_Vector3Stamped() [io]
             None    => test.assert_eq_str(cdr.status_name(r3.result()), "truncated")
 
 @test
+fn test_geometry_msgs_VelocityStamped() [io]
+    let m = geometry_msgs.VelocityStamped.sample()
+    let tn = geometry_msgs.VelocityStamped.type_name()
+    test.assert_eq_str(tn, "geometry_msgs/msg/VelocityStamped")
+    let dn = geometry_msgs.VelocityStamped.dds_type_name()
+    test.assert_eq_str(dn, "geometry_msgs::msg::dds_::VelocityStamped_")
+    test.assert_eq(str.len(geometry_msgs.VelocityStamped.type_hash()), 71)
+    for le in [true, false]
+        var w = writer(le)
+        test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
+        var r = reader_of(w, 0)
+        var back = geometry_msgs.VelocityStamped.new()
+        test.assert_eq_str(cdr.status_name(back.decode_into(var r)), "success")
+        test.assert_eq(r.remaining(), 0)
+        var w2 = writer(le)
+        test.assert_eq_str(cdr.status_name(back.encode(var w2)), "success")
+        test.assert_eq_str(hex_of(w2), hex_of(w))
+        var r2 = reader_of(w, 0)
+        match geometry_msgs.VelocityStamped.decode(var r2)
+            Some(x) =>
+                var w3 = writer(le)
+                let _ = x.encode(var w3)
+                test.assert_eq_str(hex_of(w3), hex_of(w))
+            None    => test.fail("a whole message did not decode")
+        var r3 = reader_of(w, 1)
+        match geometry_msgs.VelocityStamped.decode(var r3)
+            Some(_) => test.fail("a truncated message decoded")
+            None    => test.assert_eq_str(cdr.status_name(r3.result()), "truncated")
+
+@test
+fn test_geometry_msgs_VelocityWithCovarianceStamped() [io]
+    let m = geometry_msgs.VelocityWithCovarianceStamped.sample()
+    let tn = geometry_msgs.VelocityWithCovarianceStamped.type_name()
+    test.assert_eq_str(tn, "geometry_msgs/msg/VelocityWithCovarianceStamped")
+    let dn = geometry_msgs.VelocityWithCovarianceStamped.dds_type_name()
+    test.assert_eq_str(dn, "geometry_msgs::msg::dds_::VelocityWithCovarianceStamped_")
+    test.assert_eq(str.len(geometry_msgs.VelocityWithCovarianceStamped.type_hash()), 71)
+    for le in [true, false]
+        var w = writer(le)
+        test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
+        var r = reader_of(w, 0)
+        var back = geometry_msgs.VelocityWithCovarianceStamped.new()
+        test.assert_eq_str(cdr.status_name(back.decode_into(var r)), "success")
+        test.assert_eq(r.remaining(), 0)
+        var w2 = writer(le)
+        test.assert_eq_str(cdr.status_name(back.encode(var w2)), "success")
+        test.assert_eq_str(hex_of(w2), hex_of(w))
+        var r2 = reader_of(w, 0)
+        match geometry_msgs.VelocityWithCovarianceStamped.decode(var r2)
+            Some(x) =>
+                var w3 = writer(le)
+                let _ = x.encode(var w3)
+                test.assert_eq_str(hex_of(w3), hex_of(w))
+            None    => test.fail("a whole message did not decode")
+        var r3 = reader_of(w, 1)
+        match geometry_msgs.VelocityWithCovarianceStamped.decode(var r3)
+            Some(_) => test.fail("a truncated message decoded")
+            None    => test.assert_eq_str(cdr.status_name(r3.result()), "truncated")
+
+@test
 fn test_geometry_msgs_Wrench() [io]
     let m = geometry_msgs.Wrench.sample()
     let tn = geometry_msgs.Wrench.type_name()
     test.assert_eq_str(tn, "geometry_msgs/msg/Wrench")
     let dn = geometry_msgs.Wrench.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::Wrench_")
+    test.assert_eq(str.len(geometry_msgs.Wrench.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -845,6 +994,7 @@ fn test_geometry_msgs_WrenchStamped() [io]
     test.assert_eq_str(tn, "geometry_msgs/msg/WrenchStamped")
     let dn = geometry_msgs.WrenchStamped.dds_type_name()
     test.assert_eq_str(dn, "geometry_msgs::msg::dds_::WrenchStamped_")
+    test.assert_eq(str.len(geometry_msgs.WrenchStamped.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")

@@ -8,6 +8,7 @@
 // truncated.
 
 use std.bytes
+use std.str
 use std.test
 use cdr
 use cdrbytes
@@ -33,6 +34,7 @@ fn test_std_msgs_Bool() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Bool")
     let dn = std_msgs.BoolMsg.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Bool_")
+    test.assert_eq(str.len(std_msgs.BoolMsg.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -62,6 +64,7 @@ fn test_std_msgs_Byte() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Byte")
     let dn = std_msgs.Byte.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Byte_")
+    test.assert_eq(str.len(std_msgs.Byte.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -91,6 +94,7 @@ fn test_std_msgs_ByteMultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/ByteMultiArray")
     let dn = std_msgs.ByteMultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::ByteMultiArray_")
+    test.assert_eq(str.len(std_msgs.ByteMultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -120,6 +124,7 @@ fn test_std_msgs_Char() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Char")
     let dn = std_msgs.CharMsg.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Char_")
+    test.assert_eq(str.len(std_msgs.CharMsg.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -149,6 +154,7 @@ fn test_std_msgs_ColorRGBA() [io]
     test.assert_eq_str(tn, "std_msgs/msg/ColorRGBA")
     let dn = std_msgs.ColorRGBA.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::ColorRGBA_")
+    test.assert_eq(str.len(std_msgs.ColorRGBA.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -178,6 +184,7 @@ fn test_std_msgs_Empty() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Empty")
     let dn = std_msgs.Empty.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Empty_")
+    test.assert_eq(str.len(std_msgs.Empty.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -207,6 +214,7 @@ fn test_std_msgs_Float32() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Float32")
     let dn = std_msgs.Float32.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Float32_")
+    test.assert_eq(str.len(std_msgs.Float32.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -236,6 +244,7 @@ fn test_std_msgs_Float32MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Float32MultiArray")
     let dn = std_msgs.Float32MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Float32MultiArray_")
+    test.assert_eq(str.len(std_msgs.Float32MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -265,6 +274,7 @@ fn test_std_msgs_Float64() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Float64")
     let dn = std_msgs.Float64.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Float64_")
+    test.assert_eq(str.len(std_msgs.Float64.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -294,6 +304,7 @@ fn test_std_msgs_Float64MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Float64MultiArray")
     let dn = std_msgs.Float64MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Float64MultiArray_")
+    test.assert_eq(str.len(std_msgs.Float64MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -323,6 +334,7 @@ fn test_std_msgs_Header() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Header")
     let dn = std_msgs.Header.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Header_")
+    test.assert_eq(str.len(std_msgs.Header.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -352,6 +364,7 @@ fn test_std_msgs_Int16() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Int16")
     let dn = std_msgs.Int16.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Int16_")
+    test.assert_eq(str.len(std_msgs.Int16.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -381,6 +394,7 @@ fn test_std_msgs_Int16MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Int16MultiArray")
     let dn = std_msgs.Int16MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Int16MultiArray_")
+    test.assert_eq(str.len(std_msgs.Int16MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -410,6 +424,7 @@ fn test_std_msgs_Int32() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Int32")
     let dn = std_msgs.Int32.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Int32_")
+    test.assert_eq(str.len(std_msgs.Int32.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -439,6 +454,7 @@ fn test_std_msgs_Int32MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Int32MultiArray")
     let dn = std_msgs.Int32MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Int32MultiArray_")
+    test.assert_eq(str.len(std_msgs.Int32MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -468,6 +484,7 @@ fn test_std_msgs_Int64() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Int64")
     let dn = std_msgs.Int64.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Int64_")
+    test.assert_eq(str.len(std_msgs.Int64.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -497,6 +514,7 @@ fn test_std_msgs_Int64MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Int64MultiArray")
     let dn = std_msgs.Int64MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Int64MultiArray_")
+    test.assert_eq(str.len(std_msgs.Int64MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -526,6 +544,7 @@ fn test_std_msgs_Int8() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Int8")
     let dn = std_msgs.Int8.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Int8_")
+    test.assert_eq(str.len(std_msgs.Int8.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -555,6 +574,7 @@ fn test_std_msgs_Int8MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/Int8MultiArray")
     let dn = std_msgs.Int8MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::Int8MultiArray_")
+    test.assert_eq(str.len(std_msgs.Int8MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -584,6 +604,7 @@ fn test_std_msgs_MultiArrayDimension() [io]
     test.assert_eq_str(tn, "std_msgs/msg/MultiArrayDimension")
     let dn = std_msgs.MultiArrayDimension.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::MultiArrayDimension_")
+    test.assert_eq(str.len(std_msgs.MultiArrayDimension.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -613,6 +634,7 @@ fn test_std_msgs_MultiArrayLayout() [io]
     test.assert_eq_str(tn, "std_msgs/msg/MultiArrayLayout")
     let dn = std_msgs.MultiArrayLayout.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::MultiArrayLayout_")
+    test.assert_eq(str.len(std_msgs.MultiArrayLayout.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -642,6 +664,7 @@ fn test_std_msgs_String() [io]
     test.assert_eq_str(tn, "std_msgs/msg/String")
     let dn = std_msgs.StringMsg.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::String_")
+    test.assert_eq(str.len(std_msgs.StringMsg.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -671,6 +694,7 @@ fn test_std_msgs_UInt16() [io]
     test.assert_eq_str(tn, "std_msgs/msg/UInt16")
     let dn = std_msgs.UInt16.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt16_")
+    test.assert_eq(str.len(std_msgs.UInt16.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -700,6 +724,7 @@ fn test_std_msgs_UInt16MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/UInt16MultiArray")
     let dn = std_msgs.UInt16MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt16MultiArray_")
+    test.assert_eq(str.len(std_msgs.UInt16MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -729,6 +754,7 @@ fn test_std_msgs_UInt32() [io]
     test.assert_eq_str(tn, "std_msgs/msg/UInt32")
     let dn = std_msgs.UInt32.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt32_")
+    test.assert_eq(str.len(std_msgs.UInt32.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -758,6 +784,7 @@ fn test_std_msgs_UInt32MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/UInt32MultiArray")
     let dn = std_msgs.UInt32MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt32MultiArray_")
+    test.assert_eq(str.len(std_msgs.UInt32MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -787,6 +814,7 @@ fn test_std_msgs_UInt64() [io]
     test.assert_eq_str(tn, "std_msgs/msg/UInt64")
     let dn = std_msgs.UInt64.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt64_")
+    test.assert_eq(str.len(std_msgs.UInt64.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -816,6 +844,7 @@ fn test_std_msgs_UInt64MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/UInt64MultiArray")
     let dn = std_msgs.UInt64MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt64MultiArray_")
+    test.assert_eq(str.len(std_msgs.UInt64MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -845,6 +874,7 @@ fn test_std_msgs_UInt8() [io]
     test.assert_eq_str(tn, "std_msgs/msg/UInt8")
     let dn = std_msgs.UInt8.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt8_")
+    test.assert_eq(str.len(std_msgs.UInt8.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")
@@ -874,6 +904,7 @@ fn test_std_msgs_UInt8MultiArray() [io]
     test.assert_eq_str(tn, "std_msgs/msg/UInt8MultiArray")
     let dn = std_msgs.UInt8MultiArray.dds_type_name()
     test.assert_eq_str(dn, "std_msgs::msg::dds_::UInt8MultiArray_")
+    test.assert_eq(str.len(std_msgs.UInt8MultiArray.type_hash()), 71)
     for le in [true, false]
         var w = writer(le)
         test.assert_eq_str(cdr.status_name(m.encode(var w)), "success")

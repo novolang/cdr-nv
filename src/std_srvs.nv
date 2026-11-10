@@ -43,6 +43,18 @@ impl EmptyRequest
     fn dds_type_name() -> Str
         "std_srvs::srv::dds_::Empty_Request_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_458eaf200a3f63d9cc53d19436edebc0c140ef4c93ca75d5bd4ce19fd7759e35"
+
+    // The name of the service this is half of.
+    fn service_type_name() -> Str
+        "std_srvs/srv/Empty"
+
+    // The hash of that service.
+    fn service_type_hash() -> Str
+        "RIHS01_5888399dedec5ccc85ea6451949fd2c9f97bfdf963f9a588821639fcd31b5d19"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> EmptyRequest
         EmptyRequest {
@@ -97,6 +109,10 @@ impl EmptyResponse
     fn dds_type_name() -> Str
         "std_srvs::srv::dds_::Empty_Response_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_0a2858b3f60df644a61d0fa44cfc923a3d3628e0ad9c8ad8534b1a2c92a413dc"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> EmptyResponse
         EmptyResponse {
@@ -150,6 +166,18 @@ impl SetBoolRequest
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_srvs::srv::dds_::SetBool_Request_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_c62fbb99d94e1b25e8ef9e109f9581956bb1b3361a45a4e5810c36a90d29932e"
+
+    // The name of the service this is half of.
+    fn service_type_name() -> Str
+        "std_srvs/srv/SetBool"
+
+    // The hash of that service.
+    fn service_type_hash() -> Str
+        "RIHS01_abe9e4bb6b41b40e6789712c00ec8871923e089af3f667a79992a428cff2da0a"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> SetBoolRequest
@@ -206,6 +234,10 @@ impl SetBoolResponse
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_srvs::srv::dds_::SetBool_Response_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_d0814e7f7b4880ab77e9c57426c7aa1562ab69f11eef8e2e968812f9cbd0b059"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> SetBoolResponse
@@ -267,6 +299,18 @@ impl TriggerRequest
     fn dds_type_name() -> Str
         "std_srvs::srv::dds_::Trigger_Request_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_d010825374ce8918e72bfd826c82603e60f45419e932ea976f807b74a863a199"
+
+    // The name of the service this is half of.
+    fn service_type_name() -> Str
+        "std_srvs/srv/Trigger"
+
+    // The hash of that service.
+    fn service_type_hash() -> Str
+        "RIHS01_eeff2cd6fa5ad9d27cdf4dec64818317839b62f212a91e6b5304b634b2062c5f"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> TriggerRequest
         TriggerRequest {
@@ -322,6 +366,10 @@ impl TriggerResponse
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_srvs::srv::dds_::Trigger_Response_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_2d946c21e2fc3f1e9ca6986a8191d85fcc70097a8bb7771a053564bc47009cdf"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> TriggerResponse

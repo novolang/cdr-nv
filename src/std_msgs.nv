@@ -57,6 +57,11 @@ fn get_str_64(var r: cdr.Reader, var s: String[64])
     r.end_string()
 
 // The ROS 2 message `std_msgs/msg/Bool`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct BoolMsg
     // data
@@ -70,6 +75,10 @@ impl BoolMsg
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Bool_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_feb91e995ff9ebd09c0cb3d2aed18b11077585839fb5db80193b62d74528f6c9"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> BoolMsg
@@ -111,6 +120,11 @@ impl BoolMsg
         None
 
 // The ROS 2 message `std_msgs/msg/Byte`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Byte
     // data
@@ -124,6 +138,10 @@ impl Byte
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Byte_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_41e1a3345f73fe93ede006da826a6ee274af23dd4653976ff249b0f44e3e798f"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Byte
@@ -166,8 +184,10 @@ impl Byte
 
 // The ROS 2 message `std_msgs/msg/ByteMultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct ByteMultiArray
     // specification of data layout
@@ -183,6 +203,10 @@ impl ByteMultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::ByteMultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_972fec7f50ab3c1d06783c228e79e8a9a509021708c511c059926261ada901d4"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> ByteMultiArray
@@ -236,6 +260,11 @@ impl ByteMultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/Char`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct CharMsg
     // data
@@ -249,6 +278,10 @@ impl CharMsg
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Char_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_3ad2d04dd29ba19d04b16659afa3ccaedd691914b02a64e82e252f2fa6a586a9"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> CharMsg
@@ -309,6 +342,10 @@ impl ColorRGBA
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::ColorRGBA_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_77a7a5b9ae477306097665106e0413ba74440245b1f3d0c6d6405fe5c7813fe8"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> ColorRGBA
@@ -376,6 +413,10 @@ impl Empty
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Empty_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_20b625256f32d5dbc0d04fee44f43c41e51c70d3502f84b4a08e7a9c26a96312"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Empty
         Empty {
@@ -416,6 +457,11 @@ impl Empty
         None
 
 // The ROS 2 message `std_msgs/msg/Float32`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Float32
     // data
@@ -429,6 +475,10 @@ impl Float32
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Float32_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_7170d3d8f841f7be3172ce5f4f59f3a4d7f63b0447e8b33327601ad64d83d6e2"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Float32
@@ -471,8 +521,10 @@ impl Float32
 
 // The ROS 2 message `std_msgs/msg/Float32MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Float32MultiArray
     // specification of data layout
@@ -488,6 +540,10 @@ impl Float32MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Float32MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_0599f6f85b4bfca379873a0b4375a0aca022156bd2d7021275d116ed1fa8bfe0"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Float32MultiArray
@@ -541,6 +597,11 @@ impl Float32MultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/Float64`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Float64
     // data
@@ -554,6 +615,10 @@ impl Float64
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Float64_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_705ba9c3d1a09df43737eb67095534de36fd426c0587779bda2bc51fe790182a"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Float64
@@ -596,8 +661,10 @@ impl Float64
 
 // The ROS 2 message `std_msgs/msg/Float64MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Float64MultiArray
     // specification of data layout
@@ -613,6 +680,10 @@ impl Float64MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Float64MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_1025ddc6b9552d191f89ef1a8d2f60f3d373e28b283d8891ddcc974e8c55397f"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Float64MultiArray
@@ -686,6 +757,10 @@ impl Header
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Header_"
 
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_f49fb3ae2cf070f793645ff749683ac6b06203e41c891e17701b1cb597ce6a01"
+
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Header
         Header {
@@ -732,6 +807,11 @@ impl Header
         None
 
 // The ROS 2 message `std_msgs/msg/Int16`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Int16
     // data
@@ -745,6 +825,10 @@ impl Int16
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Int16_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_1dcc3464e47c288a55f943a389d337cdb06804de3f5cd7a266b0de718eee17e5"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Int16
@@ -787,8 +871,10 @@ impl Int16
 
 // The ROS 2 message `std_msgs/msg/Int16MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Int16MultiArray
     // specification of data layout
@@ -804,6 +890,10 @@ impl Int16MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Int16MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_b58810e8e5b90fb19a5062469eb8409f5ab11a446d60de7157a1457e52a076ce"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Int16MultiArray
@@ -857,6 +947,11 @@ impl Int16MultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/Int32`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Int32
     // data
@@ -870,6 +965,10 @@ impl Int32
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Int32_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_b6578ded3c58c626cfe8d1a6fb6e04f706f97e9f03d2727c9ff4e74b1cef0deb"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Int32
@@ -912,8 +1011,10 @@ impl Int32
 
 // The ROS 2 message `std_msgs/msg/Int32MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Int32MultiArray
     // specification of data layout
@@ -929,6 +1030,10 @@ impl Int32MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Int32MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_84a7346323525d1b4dfca899df3820f245e54009dac5a6b69217d14fdefd1701"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Int32MultiArray
@@ -982,6 +1087,11 @@ impl Int32MultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/Int64`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Int64
     // data
@@ -995,6 +1105,10 @@ impl Int64
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Int64_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_8cd1048c2f186b6bd9a92472dc1ce51723c0833a221e2b7aecfff111774f4b49"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Int64
@@ -1037,8 +1151,10 @@ impl Int64
 
 // The ROS 2 message `std_msgs/msg/Int64MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Int64MultiArray
     // specification of data layout
@@ -1054,6 +1170,10 @@ impl Int64MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Int64MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_e60f9fe34d697f0939ad49d33158693c1277fbac0e2f04b7c2995dc21c89b422"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Int64MultiArray
@@ -1107,6 +1227,11 @@ impl Int64MultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/Int8`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Int8
     // data
@@ -1120,6 +1245,10 @@ impl Int8
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Int8_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_26525065a403d972cb672f0777e333f0c799ad444ae5fcd79e43d1e73bd0f440"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Int8
@@ -1162,8 +1291,10 @@ impl Int8
 
 // The ROS 2 message `std_msgs/msg/Int8MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct Int8MultiArray
     // specification of data layout
@@ -1179,6 +1310,10 @@ impl Int8MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::Int8MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_f21998d4b492abd63330765d75d5831238d400740386f651f13a872a4d2188db"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> Int8MultiArray
@@ -1232,6 +1367,11 @@ impl Int8MultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/MultiArrayDimension`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct MultiArrayDimension
     // label of given dimension
@@ -1249,6 +1389,10 @@ impl MultiArrayDimension
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::MultiArrayDimension_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_5e773a60a4c7fc8a54985f307c7837aa2994252a126c301957a24e31282c9cbe"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> MultiArrayDimension
@@ -1301,9 +1445,10 @@ impl MultiArrayDimension
 
 // The ROS 2 message `std_msgs/msg/MultiArrayLayout`.
 //
-// The multiarray declares a generic multi-dimensional array of a
-// particular data type.  Dimensions are ordered from outer to inner.
-// That is, the dimension at index 0 has the largest stride.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct MultiArrayLayout
     // Array of dimension properties
@@ -1319,6 +1464,10 @@ impl MultiArrayLayout
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::MultiArrayLayout_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_4c66e6f78e740ac103a94cf63259f968e48c617e7699e829b63c21a5cb50dac6"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> MultiArrayLayout
@@ -1374,6 +1523,11 @@ impl MultiArrayLayout
         None
 
 // The ROS 2 message `std_msgs/msg/String`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct StringMsg
     // data
@@ -1387,6 +1541,10 @@ impl StringMsg
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::String_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_df668c740482bbd48fb39d76a70dfd4bd59db1288021743503259e948f6b1a18"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> StringMsg
@@ -1430,6 +1588,11 @@ impl StringMsg
         None
 
 // The ROS 2 message `std_msgs/msg/UInt16`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct UInt16
     // data
@@ -1443,6 +1606,10 @@ impl UInt16
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::UInt16_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_08a406e4b022bc22e907f985d6a9e9dd1d4fbecae573549cf49350113e7757b1"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> UInt16
@@ -1485,8 +1652,10 @@ impl UInt16
 
 // The ROS 2 message `std_msgs/msg/UInt16MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct UInt16MultiArray
     // specification of data layout
@@ -1502,6 +1671,10 @@ impl UInt16MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::UInt16MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_94fe73428ec63baecc774f8fb82406123e9291cf728f1b7c91caf5335129492b"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> UInt16MultiArray
@@ -1555,6 +1728,11 @@ impl UInt16MultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/UInt32`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct UInt32
     // data
@@ -1568,6 +1746,10 @@ impl UInt32
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::UInt32_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_a5c874829b752bc5fa190024b0ad76f578cc278271e855c7d02a818b3516fb4a"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> UInt32
@@ -1610,8 +1792,10 @@ impl UInt32
 
 // The ROS 2 message `std_msgs/msg/UInt32MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct UInt32MultiArray
     // specification of data layout
@@ -1627,6 +1811,10 @@ impl UInt32MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::UInt32MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_6c2577c7ad3cbdcc2164a41c12f1d5ad314ea320f3fb1ee47e78019fe16bb5b0"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> UInt32MultiArray
@@ -1680,6 +1868,11 @@ impl UInt32MultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/UInt64`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct UInt64
     // data
@@ -1693,6 +1886,10 @@ impl UInt64
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::UInt64_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_fbdc52018fc13755dce18024d1a671c856aa8b4aaf63adfb095b608f98e8c943"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> UInt64
@@ -1735,8 +1932,10 @@ impl UInt64
 
 // The ROS 2 message `std_msgs/msg/UInt64MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct UInt64MultiArray
     // specification of data layout
@@ -1752,6 +1951,10 @@ impl UInt64MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::UInt64MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_fc1c685c2f76bdc6983da025cb25d2db5fb5157b059e300f6d957d86f981b366"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> UInt64MultiArray
@@ -1805,6 +2008,11 @@ impl UInt64MultiArray
         None
 
 // The ROS 2 message `std_msgs/msg/UInt8`.
+//
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct UInt8
     // data
@@ -1818,6 +2026,10 @@ impl UInt8
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::UInt8_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_6138bd83d8c3569cb80a667db03cfc1629f529fee79d944c39c34e352e72f010"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> UInt8
@@ -1860,8 +2072,10 @@ impl UInt8
 
 // The ROS 2 message `std_msgs/msg/UInt8MultiArray`.
 //
-// Please look at the MultiArrayLayout message definition for
-// documentation on all multiarrays.
+// This was originally provided as an example message.
+// It is deprecated as of Foxy
+// It is recommended to create your own semantically meaningful message.
+// However if you would like to continue using this please use the equivalent in example_msgs.
 pub @value
 struct UInt8MultiArray
     // specification of data layout
@@ -1877,6 +2091,10 @@ impl UInt8MultiArray
     // The name DDS knows this message type by.
     fn dds_type_name() -> Str
         "std_msgs::msg::dds_::UInt8MultiArray_"
+
+    // The hash ROS 2 gives this type in discovery, `RIHS01_` and 64 digits (REP 2011).
+    fn type_hash() -> Str
+        "RIHS01_5687e861b8d307a5e48b7515467ae7a5fc2daf805bd0ce6d8e9e604bade9f385"
 
     // A message with every field at its default, which is zero unless the definition says otherwise.
     fn new() -> UInt8MultiArray
