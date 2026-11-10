@@ -1,0 +1,452 @@
+// cdr.nv — Common Data Representation, version 1, as ROS 2 messages
+// travel in it.
+//
+// A ROS 2 message on the wire is a four-byte encapsulation header and
+// then the message's fields, each written at its natural size.  This
+// module writes and reads that form.  It is the encoding that
+// rosidl_typesupport_fastrtps and Fast CDR produce for every message a
+// DDS-based ROS 2 stack publishes, and the one a rosbag2 file stores.
+//
+// THE HEADER.  Four bytes.  The first two are the representation
+// identifier, big-endian: `00 01` is little-endian CDR and `00 00` is
+// big-endian CDR.  The last two are options, which this module writes
+// as zero and does not read.
+//
+// ALIGNMENT.  Every primitive starts at an offset that is a multiple
+// of its own size, counted from the first byte AFTER the header.  A
+// four-byte integer after a one-byte one is therefore preceded by
+// three zero bytes of padding, and an eight-byte float by up to seven.
+// This is the rule of XCDR version 1; version 2 aligns eight-byte
+// values to four, and this module does not write version 2.
+//
+// THE FIELDS.  `bool` and the one-byte integers take one byte.  The
+// wider integers and the floats take two, four or eight, in the byte
+// order the header names.  A string is a `uint32` length that counts
+// its terminating NUL, then the bytes, then the NUL.  A sequence is a
+// `uint32` element count and then the elements, each aligned to its
+// own type.  A fixed array has no count.  A nested message is its
+// fields in order, with no header and no length of its own.
+//
+// NO ALLOCATION.  A `Writer` and a `Reader` each hold their bytes
+// inline, in a buffer of `CDR_CAP` bytes, and are `@value` structs the
+// caller declares as locals.  Nothing here touches the heap, so the
+// module builds for the embedded tier.  A message whose encoding does
+// not fit is reported as `Full` and one that does not fit the reader
+// as `TooLong`; neither is a panic, because both are things a wire can
+// do to a program.
+//
+// ONE STICKY STATUS.  Each call that can fail records the failure in
+// the `Writer` or the `Reader` and then does nothing until the status
+// is looked at.  A message that is twelve fields long therefore costs
+// one check at the end instead of twelve in the middle, and the FIRST
+// failure is the one reported.  After a failure a reader answers zero
+// from every call, so a loop bounded by a count it read never runs.
+//
+// This module reads and writes no wide characters.  ROS 2's `wstring`
+// is not covered, and neither is XCDR version 2.
+
+// The most bytes a `Writer` or a `Reader` holds, the four-byte header
+// included.  It is a constant of this package and not a parameter of the
+// types, because the language has no capacity parameter on a function.
+// A message that encodes to more than this is `Full`.
+pub const CDR_CAP = 1024
+
+// The size of the encapsulation header.
+pub const HEADER_LEN = 4
+
+// What a call found, or the first thing it found wrong.
+@value
+pub enum Status
+    // Nothing has gone wrong yet.
+    Success
+    // The writer's buffer is full: the message does not fit `CDR_CAP`.
+    Full
+    // The reader reached the end of its bytes in the middle of a field.
+    Truncated
+    // A string or a sequence is longer than the place that receives it.
+    TooLong
+    // A string's length is zero, or its last byte is not a NUL.
+    BadString
+    // The encapsulation header does not name little or big endian CDR.
+    BadHeader
+    // A `bool` byte is neither 0 nor 1.
+    BadValue
+
+// A short name for a status, for a log line.
+pub fn status_name(s: Status) -> Str
+    match s
+        Success   => "success"
+        Full      => "full"
+        Truncated => "truncated"
+        TooLong   => "too long"
+        BadString => "bad string"
+        BadHeader => "bad header"
+        BadValue  => "bad value"
+
+// The 32-bit IEEE 754 pattern of a float, rounded to nearest even.
+//
+// There is no operation that reads an `fp32`'s bits, so the value goes
+// through a binary64 and its fields are moved: the exponent is
+// rebiased from 1023 to 127, the top 23 bits of the mantissa are kept,
+// and a result below the smallest normal number is shifted into the
+// subnormal range.  A NaN keeps the top of its payload.
+fn f32_bits(x: fp32) -> Int
+    let wide: Float = x
+    let d = float.to_bits(wide)
+    let sign = (d >>> 63) << 31
+    let e = (d >>> 52) & 0x7FF
+    let m = d & 0xFFFFFFFFFFFFF
+    if e == 0x7FF
+        return sign | 0x7F800000 | (m >>> 29)
+    if e == 0
+        return sign
+    let e32 = e - 1023 + 127
+    if e32 >= 1
+        return sign | (e32 << 23) | (m >>> 29)
+    sign | ((m | (1 << 52)) >>> (29 + 1 - e32))
+
+// The float a 32-bit IEEE 754 pattern holds.
+fn f32_from_bits(b: Int) -> fp32
+    let sign = (b >>> 31) & 1
+    let e = (b >>> 23) & 0xFF
+    let m = b & 0x7FFFFF
+    var wide: Float = 0.0
+    if e == 0xFF
+        wide = float.from_bits((sign << 63) | (0x7FF << 52) | (m << 29))
+    else if e == 0
+        let tiny = (m as Float) * 1.401298464324817e-45
+        wide = float.from_bits(float.to_bits(tiny) | (sign << 63))
+    else
+        wide = float.from_bits((sign << 63) | ((e - 127 + 1023) << 52) | (m << 29))
+    wide as fp32
+
+// The padding needed to bring the payload offset `off` to a multiple
+// of `n`.
+fn pad_for(off: Int, n: Int) -> Int
+    (n - off % n) % n
+
+// A message being written.
+//
+// The bytes are inline, so a `Writer` is a value on the caller's
+// stack.  Declare it `var`, build it with `writer_le` or `writer_be`,
+// and hand it to a message's `encode` as `var w`.
+@value
+pub struct Writer
+    buf: Vec[u8; CDR_CAP]
+    le: Bool
+    status: Status
+
+// An empty message in little-endian CDR, with its header written.
+//
+// ```novo
+// use cdr
+//
+// fn main() [io]
+//     var w = cdr.writer_le()
+//     w.put_u32(7 as u32)
+//     println("${w.len()}")   // 8: four of header, four of value
+// ```
+pub fn writer_le() -> Writer
+    var w = Writer { buf: Vec.new(), le: true, status: Status.Success }
+    w.start(1)
+    w
+
+// An empty message in big-endian CDR, with its header written.
+pub fn writer_be() -> Writer
+    var w = Writer { buf: Vec.new(), le: false, status: Status.Success }
+    w.start(0)
+    w
+
+impl Writer
+    // The header: `00`, the byte-order byte, and two option bytes of zero.
+    fn start(var self, order: Int)
+        self.put_raw(0 as u8)
+        self.put_raw(order as u8)
+        self.put_raw(0 as u8)
+        self.put_raw(0 as u8)
+
+    // One byte at the end, or `Full` if there is no room.  Does
+    // nothing once the status is not `Success`, which keeps the FIRST
+    // failure.
+    fn put_raw(var self, b: u8)
+        match self.status
+            Success =>
+                match self.buf.push(b)
+                    Ok(_)  => self.status = Status.Success
+                    Err(_) => self.status = Status.Full
+            _ => self.status = self.status
+
+    // Pad with zero bytes until the next byte lands on a multiple of
+    // `n`, counting from the first byte after the header.
+    fn align(var self, n: Int)
+        let pad = pad_for(self.buf.len() - HEADER_LEN, n)
+        for _ in 0..pad
+            self.put_raw(0 as u8)
+
+    // An unsigned quantity of `size` bytes, aligned to `size`, in the
+    // header's byte order.  `x` is read as a bit pattern, so a negative
+    // `Int` writes its two's-complement bytes.
+    fn put_uint(var self, x: Int, size: Int)
+        self.align(size)
+        for i in 0..size
+            let shift = if self.le then 8 * i else 8 * (size - 1 - i)
+            self.put_raw(((x >>> shift) & 0xFF) as u8)
+
+    // A `bool` is one byte, 0 or 1.
+    fn put_bool(var self, v: Bool)
+        self.put_raw((if v then 1 else 0) as u8)
+
+    // A `uint8`, `char` or `byte`: one byte, no padding.
+    fn put_u8(var self, v: u8)
+        self.put_raw(v)
+
+    // An `int8`: one byte, no padding.
+    fn put_i8(var self, v: i8)
+        self.put_raw((v as Int & 0xFF) as u8)
+
+    // A `uint16`, aligned to 2.
+    fn put_u16(var self, v: u16)
+        self.put_uint(v as Int, 2)
+
+    // An `int16`, aligned to 2.
+    fn put_i16(var self, v: i16)
+        self.put_uint(v as Int, 2)
+
+    // A `uint32`, aligned to 4.
+    fn put_u32(var self, v: u32)
+        self.put_uint(v as Int, 4)
+
+    // An `int32`, aligned to 4.
+    fn put_i32(var self, v: i32)
+        self.put_uint(v as Int, 4)
+
+    // A `uint64`, aligned to 8.  The language has no unsigned 64-bit
+    // type, so the value is an `Int` whose bit pattern is written: a
+    // `uint64` above 2^63 - 1 arrives as a negative number.
+    fn put_u64(var self, v: Int)
+        self.put_uint(v, 8)
+
+    // An `int64`, aligned to 8.
+    fn put_i64(var self, v: Int)
+        self.put_uint(v, 8)
+
+    // A `float32`, aligned to 4.
+    fn put_f32(var self, v: fp32)
+        self.put_uint(f32_bits(v), 4)
+
+    // A `float64`, aligned to 8.
+    fn put_f64(var self, v: Float)
+        self.put_uint(float.to_bits(v), 8)
+
+    // The `uint32` count that opens a sequence, aligned to 4.
+    fn put_count(var self, n: Int)
+        self.put_uint(n, 4)
+
+    // The length that opens a string: `n` characters and the NUL that
+    // follows them.  Write the `n` characters with `put_u8` and then
+    // call `end_string`.
+    fn begin_string(var self, n: Int)
+        self.put_uint(n + 1, 4)
+
+    // The NUL that closes a string.
+    fn end_string(var self)
+        self.put_raw(0 as u8)
+
+    // The bytes written so far, the header included.
+    fn len(self) -> Int
+        self.buf.len()
+
+    // Byte `i` of the message, header included.  `i` must be below
+    // `len`.
+    fn byte(self, i: Int) -> u8
+        self.buf[i]
+
+    // What the writer found: `Success` until a field did not fit.
+    fn result(self) -> Status
+        self.status
+
+    // Whether nothing has gone wrong.
+    fn ok(self) -> Bool
+        match self.status
+            Success => true
+            _       => false
+
+// A message being read.
+//
+// Like the `Writer`, the bytes are inline.  A reader is built from a
+// copy of the message, so the caller's buffer may be reused as soon as
+// `reader_from` has returned.
+@value
+pub struct Reader
+    buf: Vec[u8; CDR_CAP]
+    pos: Int
+    le: Bool
+    status: Status
+
+// A reader over `src`, with the header read.  A source shorter than
+// the header is `Truncated`, and a header whose representation is not
+// `00 00` or `00 01` is `BadHeader`.  The status of the answer says
+// which; check it with `result` before using the reader, or read on and
+// check once at the end.
+//
+// ```novo
+// use cdr
+//
+// fn main() [io]
+//     var w = cdr.writer_le()
+//     w.put_i32(-2 as i32)
+//     let r = cdr.reader_from(w.buf)
+//     println(cdr.status_name(r.result()))   // success
+// ```
+pub fn reader_from(src: Vec[u8; CDR_CAP]) -> Reader
+    var r = Reader { buf: src, pos: HEADER_LEN, le: true, status: Status.Success }
+    r.read_header()
+    r
+
+impl Reader
+    // The header: a first byte of zero and a second of 0 or 1.  The
+    // two option bytes are not read.
+    fn read_header(var self)
+        if self.buf.len() < HEADER_LEN
+            self.status = Status.Truncated
+        else if self.buf[0] != 0 as u8
+            self.status = Status.BadHeader
+        else if self.buf[1] == 1 as u8
+            self.le = true
+        else if self.buf[1] == 0 as u8
+            self.le = false
+        else
+            self.status = Status.BadHeader
+
+    // The first failure, kept.
+    fn fail(var self, s: Status)
+        match self.status
+            Success => self.status = s
+            _       => self.status = self.status
+
+    // One byte, or zero with `Truncated` when the bytes have run out.
+    fn get_raw(var self) -> u8
+        match self.status
+            Success =>
+                if self.pos >= self.buf.len()
+                    self.fail(Status.Truncated)
+                    0 as u8
+                else
+                    let b = self.buf[self.pos]
+                    self.pos = self.pos + 1
+                    b
+            _ => 0 as u8
+
+    // Skip padding until the next byte is at a multiple of `n` from
+    // the first byte after the header.  The padding bytes are not
+    // checked: a writer is free to put anything in them, and a reader
+    // that refuses a nonzero one refuses a message other stacks accept.
+    fn align(var self, n: Int)
+        let pad = pad_for(self.pos - HEADER_LEN, n)
+        for _ in 0..pad
+            let _ = self.get_raw()
+
+    // An unsigned quantity of `size` bytes, aligned to `size`.  Eight
+    // bytes fill the whole `Int`, so a value at or above 2^63 comes
+    // back negative.
+    fn get_uint(var self, size: Int) -> Int
+        self.align(size)
+        var x = 0
+        for i in 0..size
+            let b = self.get_raw() as Int
+            let shift = if self.le then 8 * i else 8 * (size - 1 - i)
+            x = x | (b << shift)
+        x
+
+    // A `bool`.  A byte other than 0 and 1 is `BadValue`.
+    fn get_bool(var self) -> Bool
+        let b = self.get_raw() as Int
+        if b > 1
+            self.fail(Status.BadValue)
+        b == 1
+
+    // A `uint8`, `char` or `byte`.
+    fn get_u8(var self) -> u8
+        self.get_raw()
+
+    // An `int8`.
+    fn get_i8(var self) -> i8
+        self.get_raw() as i8
+
+    // A `uint16`.
+    fn get_u16(var self) -> u16
+        self.get_uint(2) as u16
+
+    // An `int16`.
+    fn get_i16(var self) -> i16
+        self.get_uint(2) as i16
+
+    // A `uint32`.
+    fn get_u32(var self) -> u32
+        self.get_uint(4) as u32
+
+    // An `int32`.
+    fn get_i32(var self) -> i32
+        self.get_uint(4) as i32
+
+    // A `uint64`, as an `Int` holding its bit pattern.
+    fn get_u64(var self) -> Int
+        self.get_uint(8)
+
+    // An `int64`.
+    fn get_i64(var self) -> Int
+        self.get_uint(8)
+
+    // A `float32`.
+    fn get_f32(var self) -> fp32
+        f32_from_bits(self.get_uint(4))
+
+    // A `float64`.
+    fn get_f64(var self) -> Float
+        float.from_bits(self.get_uint(8))
+
+    // The element count that opens a sequence, checked against `cap`,
+    // the most the destination holds.  A larger count is `TooLong` and
+    // the answer is 0, so the loop that follows reads nothing.
+    fn get_count(var self, cap: Int) -> Int
+        let n = self.get_uint(4)
+        if n > cap
+            self.fail(Status.TooLong)
+            0
+        else
+            n
+
+    // The length that opens a string, as a number of characters not
+    // counting the NUL.  A length of zero is `BadString`, and a length
+    // larger than `cap`, the most the destination holds, is `TooLong`.
+    // Read that many characters with `get_u8` and then call
+    // `end_string`.
+    fn begin_string(var self, cap: Int) -> Int
+        let n = self.get_uint(4) - 1
+        if n < 0
+            self.fail(Status.BadString)
+            0
+        else if n > cap
+            self.fail(Status.TooLong)
+            0
+        else
+            n
+
+    // The NUL that closes a string.  Anything else is `BadString`.
+    fn end_string(var self)
+        if self.get_raw() != 0 as u8
+            self.fail(Status.BadString)
+
+    // The bytes not yet read.
+    fn remaining(self) -> Int
+        self.buf.len() - self.pos
+
+    // What the reader found: `Success` until a field was wrong.
+    fn result(self) -> Status
+        self.status
+
+    // Whether nothing has gone wrong.
+    fn ok(self) -> Bool
+        match self.status
+            Success => true
+            _       => false

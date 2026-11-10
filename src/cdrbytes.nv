@@ -1,0 +1,55 @@
+// cdrbytes.nv — the bridge between the fixed-capacity `Writer` and
+// `Reader` of `cdr` and the standard library's `Bytes`.
+//
+// A device keeps a message in the buffer inside its `Writer` and hands
+// the bytes to a UART or a socket one at a time.  A workstation holds a
+// message as a `Bytes`, which is what a socket returns, what a file
+// holds and what `ros2-nv`'s `rosmsg` carries.  This module is the one
+// place the two meet, and it is a host module because the embedded
+// runtime defines no `Bytes`.
+
+use std.bytes
+use cdr
+
+// The bytes a writer holds, the encapsulation header first.
+//
+// ```novo
+// use std.bytes
+// use cdr
+// use cdrbytes
+//
+// fn main() [io]
+//     var w = cdr.writer_le()
+//     w.put_u16(258 as u16)
+//     println(bytes.to_hex(cdrbytes.to_bytes(w)))   // 000100000201
+// ```
+pub fn to_bytes(w: Writer) -> Bytes
+    var c = bytes.cursor_le(bytes.zeros(w.len()))
+    for i in 0..w.len()
+        c.put_u8(w.byte(i) as Int)
+    c.finish()
+
+// A reader over `src`.  A message longer than `CDR_CAP` bytes does not
+// fit the reader's buffer: the answer is a reader whose status is
+// `TooLong`, and every field it is asked for reads as zero.
+//
+// ```novo
+// use std.bytes
+// use cdr
+// use cdrbytes
+//
+// fn main() [io]
+//     let wire = bytes.from_hex("0001000007000000") ?? bytes.zeros(0)
+//     var r = cdrbytes.reader_from_bytes(wire)
+//     println("${r.get_i32()}")   // 7
+// ```
+pub fn reader_from_bytes(src: Bytes) -> Reader
+    var v: Vec[u8; CDR_CAP] = Vec.new()
+    let n = bytes.len(src)
+    let keep = if n > CDR_CAP then CDR_CAP else n
+    for i in 0..keep
+        let _ = v.push((bytes.byte_at(src, i) ?? 0) as u8)
+    var r = cdr.reader_from(v)
+    if n > CDR_CAP
+        r.fail(Status.TooLong)
+    r

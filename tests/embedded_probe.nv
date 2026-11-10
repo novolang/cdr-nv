@@ -1,0 +1,151 @@
+// tests/embedded_probe.nv — this package's device claim, as a program
+// that either builds for a Cortex-M or does not.
+//
+// THE CONSUMER IS A MICROCONTROLLER NODE: a Cortex-M with a serial line
+// to a micro-ROS agent, no heap allocator, and a few messages to send
+// and receive.  Everything it does with the wire format is bytes into a
+// buffer and bytes out of one, and this program is that work compiled
+// for the hardware rather than a sentence saying it would compile.
+//
+// WHAT IT BUILDS.  `cdr`, and three of the generated message modules:
+// `geometry_msgs` (a `Twist`, the message a velocity command is),
+// `std_msgs` (a `Header`, which has a string in it) and `sensor_msgs`
+// (an `Imu`, which is the largest of the three).  Each message is
+// encoded into a `cdr.Writer`, read back through a `cdr.Reader`, and
+// checked against the length and the bytes the CDR rules give.
+//
+// WHAT THE ALLOCATION CHECK COVERS.  Each check function carries
+// `@no_alloc`, so the build refuses (E4005) if anything it calls, in
+// this package or in the standard library, reaches the arena.  Between
+// them they call both writers, the `put_` and `get_` calls, the string
+// and sequence calls, `encode`, `decode`, `decode_into`, `sample` and
+// `new`.  The program builds with that annotation or it does not build.
+//
+// WHAT IS NOT HERE, AND WHY.  `cdrbytes` is not, because it converts to
+// the standard library's `Bytes`, which the embedded runtime does not
+// define, and `msggen` is not, because it builds the text of a module.
+// Both are named in `host_modules` in the manifest.  A firmware node
+// holds its message in a `Writer` and its input in a `Reader`.
+
+use cdr
+use interfaces.geometry_msgs
+use interfaces.sensor_msgs
+use interfaces.std_msgs
+
+// A velocity command written and read back in both byte orders.
+@tier(embedded)
+@no_alloc
+fn twist_checks() -> Int
+    var n = 0
+    let t: geometry_msgs.Twist = geometry_msgs.Twist.sample()
+    var w: cdr.Writer = cdr.writer_le()
+    let st: cdr.Status = t.encode(var w)
+    // Four bytes of header and six float64 values.
+    if w.len() == 52
+        n = n + 1
+    if w.byte(0) == 0 as u8 and w.byte(1) == 1 as u8
+        n = n + 1
+    if st == cdr.Status.Success
+        n = n + 1
+    var r: cdr.Reader = cdr.reader_from(w.buf)
+    var back: geometry_msgs.Twist = geometry_msgs.Twist.new()
+    let rs: cdr.Status = back.decode_into(var r)
+    if rs == cdr.Status.Success and r.remaining() == 0
+        n = n + 1
+    if back.linear.x == t.linear.x and back.angular.z == t.angular.z
+        n = n + 1
+    // The same message in big-endian CDR, which flips the header's second
+    // byte and every multi-byte value.
+    var wb: cdr.Writer = cdr.writer_be()
+    let sb: cdr.Status = t.encode(var wb)
+    if sb == cdr.Status.Success and wb.byte(1) == 0 as u8 and wb.len() == 52
+        n = n + 1
+    var rb: cdr.Reader = cdr.reader_from(wb.buf)
+    match geometry_msgs.Twist.decode(var rb)
+        Some(x) =>
+            if x.linear.y == t.linear.y
+                n = n + 1
+        None => n = n + 0
+    n
+
+// A header, which holds a string, and an `Imu`, which holds nine-element
+// arrays that sit at eight-byte alignment after a string.
+@tier(embedded)
+@no_alloc
+fn header_imu_checks() -> Int
+    var n = 0
+    let h: std_msgs.Header = std_msgs.Header.sample()
+    var w: cdr.Writer = cdr.writer_le()
+    let st: cdr.Status = h.encode(var w)
+    if st == cdr.Status.Success
+        n = n + 1
+    var r: cdr.Reader = cdr.reader_from(w.buf)
+    match std_msgs.Header.decode(var r)
+        Some(x) =>
+            if x.frame_id.len() == h.frame_id.len() and x.stamp.sec == h.stamp.sec
+                n = n + 1
+        None => n = n + 0
+    let imu: sensor_msgs.Imu = sensor_msgs.Imu.sample()
+    var wi: cdr.Writer = cdr.writer_le()
+    let si: cdr.Status = imu.encode(var wi)
+    if si == cdr.Status.Success and wi.len() > 300
+        n = n + 1
+    var ri: cdr.Reader = cdr.reader_from(wi.buf)
+    var imu_back: sensor_msgs.Imu = sensor_msgs.Imu.new()
+    let sr: cdr.Status = imu_back.decode_into(var ri)
+    if sr == cdr.Status.Success and ri.remaining() == 0
+        n = n + 1
+    if imu_back.linear_acceleration_covariance[8] == imu.linear_acceleration_covariance[8]
+        n = n + 1
+    n
+
+// What a receiver does with bad input: the reader says what was wrong
+// and answers zero from then on, and the writer says when it is full.
+@tier(embedded)
+@no_alloc
+fn refusal_checks() -> Int
+    var n = 0
+    var w: cdr.Writer = cdr.writer_le()
+    w.put_u32(7 as u32)
+    var r: cdr.Reader = cdr.reader_from(w.buf)
+    let a: i32 = r.get_i32()
+    let b: i32 = r.get_i32()
+    if a == 7 as i32 and b == 0 as i32 and r.result() == cdr.Status.Truncated
+        n = n + 1
+    // A byte that is neither 0 nor 1 is not a bool.
+    var wb: cdr.Writer = cdr.writer_le()
+    wb.put_u8(2 as u8)
+    var rb: cdr.Reader = cdr.reader_from(wb.buf)
+    let flag: Bool = rb.get_bool()
+    if not flag and rb.result() == cdr.Status.BadValue
+        n = n + 1
+    // A writer fills and then says so, and keeps saying it.
+    var full: cdr.Writer = cdr.writer_be()
+    for _ in 0..cdr.CDR_CAP
+        full.put_u8(1 as u8)
+    if full.result() == cdr.Status.Full and full.len() == cdr.CDR_CAP
+        n = n + 1
+    n
+
+// Every answer this probe checks, folded into one number so a single
+// comparison decides the run.
+@tier(embedded)
+@no_alloc
+fn score() -> Int
+    twist_checks() + header_imu_checks() + refusal_checks()
+
+@tier(rt)
+fn main() [hw]
+    bsp.board.init()
+    // 7 + 5 + 3 is the number of checks above.  The count is printed on a
+    // failure rather than only compared, so a device that disagrees with
+    // the host says HOW MANY it lost and a bisect has somewhere to start.
+    let n = score()
+    if n == 15
+        hal.uart.write("PASS: cdr-embedded\n")
+    else
+        hal.uart.write("FAIL: cdr-embedded score=")
+        hal.uart.write(str.from_int(n))
+        hal.uart.write("\n")
+    loop
+        hal.timer.delay_ms(1000)

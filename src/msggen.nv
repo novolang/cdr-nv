@@ -1,0 +1,1409 @@
+// msggen.nv — turns a ROS 2 interface definition into a novo-lang module.
+//
+// A ROS 2 `.msg` file lists the fields of one message, one per line,
+// as a type and a name.  A `.srv` file lists two messages, a request
+// and a response, divided by a line of three dashes.  This module
+// reads either and writes the text of a module with one `@value`
+// struct per message.  Each struct has a `new`, an `encode` that writes
+// the message through a `cdr.Writer`, and a `decode` and a `decode_into`
+// that read one back from a `cdr.Reader`.
+//
+// WHAT IS READ.  The primitive types `bool`, `byte`, `char`, `float32`,
+// `float64`, `int8` to `int64`, `uint8` to `uint64` and `string`; a
+// string with a bound, `string<=10`; an array with a fixed length
+// `T[3]`, an unbounded sequence `T[]` and a bounded sequence `T[<=5]`;
+// a nested message as `pkg/Type`, as `Type` in the message's own
+// package, or as `Header`, which ROS 2 reads as `std_msgs/Header`; a
+// constant `T NAME=value`; and a default `T name value`.
+//
+// WHAT IS NOT.  `wstring` is refused, because the module that writes
+// the encoding does not write wide characters.  An `.action` file is
+// not read.  A constant of an array type is refused, as ROS 2 refuses
+// it.
+//
+// HOW EACH TYPE MAPS.  Every size is fixed when the module is
+// generated, because the structs live in a place the caller owns and
+// the device build allocates nothing.  An unbounded `string` becomes
+// a `String[N]` with `N` from `string_cap`, a bounded one `String[B]`
+// with `B` the bound; an unbounded sequence becomes a `Vec[T; N]` with
+// `N` from `seq_cap`, a bounded one `Vec[T; B]`; a fixed array becomes
+// `[T; N]`.  A longer string or sequence on the wire is reported by the
+// reader as `TooLong` and never truncated.
+//
+// WHAT IS LEFT OUT.  The type hash that ROS 2 Iron and later put on
+// the wire in discovery is not generated.  It is a SHA-256 over a JSON
+// description of the message and of every type it contains, and a
+// digest that has never been compared with a ROS 2 installation is
+// worse than none.  The MD5 sum is ROS 1's.  The type name,
+// `std_msgs/msg/String`, and the DDS type name,
+// `std_msgs::msg::dds_::String_`, are generated.
+//
+// This module has no effects: it takes the text of a definition and
+// answers the text of a module.  Reading and writing the files is the
+// program in `tools/msggen.nv`.
+
+use std.str
+
+// How a field's shape reads in the definition.
+pub const SHAPE_SCALAR = 0
+// `T[N]`: exactly N elements, no count on the wire.
+pub const SHAPE_FIXED = 1
+// `T[<=N]`: at most N elements, a count on the wire.
+pub const SHAPE_BOUNDED = 2
+// `T[]`: any number of elements, a count on the wire; the generated
+// capacity is `GenOptions.seq_cap`.
+pub const SHAPE_UNBOUNDED = 3
+
+// A field's type, as the definition spells it.
+pub struct TypeRef
+    // The primitive's name (`float64`, `string`), or empty for a nested message.
+    prim: Str
+    // For a nested message: the package.
+    pkg: Str
+    // For a nested message: the message name.
+    name: Str
+    // The bound of a `string<=N`, or -1 for a string with none.
+    bound: Int
+    // One of the `SHAPE_` constants.
+    shape: Int
+    // N of `T[N]` and of `T[<=N]`; 0 for the other two shapes.
+    count: Int
+
+// One field of a message.
+pub struct Field
+    // The field's type.
+    ty: TypeRef
+    // The name in the definition.
+    name: Str
+    // Whether the definition gave a default.
+    has_default: Bool
+    // The default, one Novo expression per element: one for a scalar, N for an array, any number for a sequence.
+    defaults: [Str]
+    // The comment lines that describe the field.
+    doc: [Str]
+
+// One constant of a message.
+pub struct Const
+    // The primitive type's name.
+    prim: Str
+    // The name in the definition.
+    name: Str
+    // The value as a Novo literal, with no cast.
+    expr: Str
+    // The comment lines that describe the constant.
+    doc: [Str]
+
+// One message: a `.msg` file, or half of a `.srv`.
+pub struct Message
+    // The ROS package.
+    pkg: Str
+    // The ROS name: `String`, or `AddTwoInts_Request`.
+    ros_name: Str
+    // The struct's name in the generated module.
+    name: Str
+    // `std_msgs/msg/String`.
+    type_name: Str
+    // `std_msgs::msg::dds_::String_`.
+    dds_name: Str
+    // The fields, in order.
+    fields: [Field]
+    // The constants, in order.
+    consts: [Const]
+    // The comment lines at the head of the file.
+    doc: [Str]
+
+// What the generator is told besides the definitions.
+pub struct GenOptions
+    // The capacity of a string with no bound.
+    string_cap: Int
+    // The capacity of a sequence with no bound.
+    seq_cap: Int
+    // The module path under which the other packages' modules are found,
+    // with its trailing dot: `interfaces.` or empty.
+    prefix: Str
+    // The names of the definition files, for the header comment.
+    sources: [Str]
+
+// The options a first generation uses: 64-byte strings, 16-element
+// sequences, and the other packages under `interfaces.`.
+pub fn default_options() -> GenOptions
+    GenOptions { string_cap: 64, seq_cap: 16, prefix: "interfaces.", sources: [] }
+
+// ---------------------------------------------------------------------
+// Characters.
+
+fn is_digit(c: Int) -> Bool
+    c >= 48 and c <= 57
+
+fn is_lower(c: Int) -> Bool
+    c >= 97 and c <= 122
+
+fn is_upper(c: Int) -> Bool
+    c >= 65 and c <= 90
+
+// Whether every byte of `s` satisfies the class `kind`: 1 lowercase
+// name, 2 uppercase constant, 3 camel-case message.  The first byte
+// must be a letter, and `_` is allowed after it except where the class
+// forbids it.
+fn name_ok(s: Str, kind: Int) -> Bool
+    let n = str.len(s)
+    if n == 0
+        return false
+    for i in 0..n
+        let c = str.byte_at_or(s, i, 0)
+        var ok = false
+        if kind == 1
+            ok = is_lower(c) or (i > 0 and (is_digit(c) or c == 95))
+        else if kind == 2
+            ok = is_upper(c) or (i > 0 and (is_digit(c) or c == 95))
+        else
+            ok = is_upper(c) or (i > 0 and (is_lower(c) or is_digit(c)))
+        if not ok
+            return false
+    true
+
+// Whether `s` is a name of a package: lowercase, digits and `_`.
+fn pkg_ok(s: Str) -> Bool
+    name_ok(s, 1)
+
+// The first index of the byte `ch` in `s`, or -1.
+fn find_byte(s: Str, ch: Int) -> Int
+    for i in 0..str.len(s)
+        if str.byte_at_or(s, i, 0) == ch
+            return i
+    -1
+
+// The text of `s` from `lo` to the end.
+fn tail(s: Str, lo: Int) -> Str
+    str.slice(s, lo, str.len(s))
+
+// ---------------------------------------------------------------------
+// Primitives.
+
+// Whether `t` names a primitive type of the interface language, `string` included.
+fn is_primitive(t: Str) -> Bool
+    match t
+        "bool"    => true
+        "byte"    => true
+        "char"    => true
+        "float32" => true
+        "float64" => true
+        "int8"    => true
+        "uint8"   => true
+        "int16"   => true
+        "uint16"  => true
+        "int32"   => true
+        "uint32"  => true
+        "int64"   => true
+        "uint64"  => true
+        "string"  => true
+        _         => false
+
+// The Novo type of a primitive scalar.
+fn prim_type(t: Str) -> Str
+    match t
+        "bool"    => "Bool"
+        "byte"    => "u8"
+        "char"    => "u8"
+        "float32" => "fp32"
+        "float64" => "Float"
+        "int8"    => "i8"
+        "uint8"   => "u8"
+        "int16"   => "i16"
+        "uint16"  => "u16"
+        "int32"   => "i32"
+        "uint32"  => "u32"
+        "int64"   => "Int"
+        "uint64"  => "Int"
+        _         => "Str"
+
+// The suffix of `put_` and `get_` that moves a primitive.
+fn prim_op(t: Str) -> Str
+    match t
+        "bool"    => "bool"
+        "byte"    => "u8"
+        "char"    => "u8"
+        "float32" => "f32"
+        "float64" => "f64"
+        "int8"    => "i8"
+        "uint8"   => "u8"
+        "int16"   => "i16"
+        "uint16"  => "u16"
+        "int32"   => "i32"
+        "uint32"  => "u32"
+        "int64"   => "i64"
+        _         => "u64"
+
+// The inclusive range of an integer primitive, as (low, high).  The
+// 64-bit unsigned type stops at the largest `Int`, because the
+// language has no unsigned 64-bit literal.
+fn int_range(t: Str) -> (Int, Int)
+    match t
+        "byte"   => (0, 255)
+        "char"   => (0, 255)
+        "uint8"  => (0, 255)
+        "int8"   => (-128, 127)
+        "uint16" => (0, 65535)
+        "int16"  => (-32768, 32767)
+        "uint32" => (0, 4294967295)
+        "int32"  => (-2147483648, 2147483647)
+        "uint64" => (0, 9223372036854775807)
+        _        => (-9223372036854775807 - 1, 9223372036854775807)
+
+// An integer written as decimal or as `0x` hexadecimal, with an
+// optional leading minus.
+fn parse_int(text: Str) -> ?Int
+    var s = text
+    var neg = false
+    if str.starts_with(s, "-")
+        neg = true
+        s = tail(s, 1)
+    if str.starts_with(s, "0x") or str.starts_with(s, "0X")
+        let digits = tail(s, 2)
+        if str.len(digits) == 0 or str.len(digits) > 16
+            return None
+        var v = 0
+        for i in 0..str.len(digits)
+            let c = str.byte_at_or(digits, i, 0)
+            var d = -1
+            if is_digit(c)
+                d = c - 48
+            else if c >= 97 and c <= 102
+                d = c - 87
+            else if c >= 65 and c <= 70
+                d = c - 55
+            if d < 0
+                return None
+            v = v * 16 + d
+        return Some(if neg then 0 - v else v)
+    let n = str.to_int(s) ?? -1
+    if n < 0 or not is_digit(str.byte_at_or(s, 0, 0))
+        return None
+    Some(if neg then 0 - n else n)
+
+// A float written in the interface language, as a Novo literal: the
+// digits, a point, and an exponent if there was one.
+fn float_literal(text: Str) -> ?Str
+    if str.len(text) == 0
+        return None
+    for i in 0..str.len(text)
+        let c = str.byte_at_or(text, i, 0)
+        if not (is_digit(c) or c == 46 or c == 101 or c == 69 or c == 43 or c == 45)
+            return None
+    let v = str.to_float(text)
+    match v
+        None => None
+        Some(_) =>
+            if str.contains(text, ".")
+                Some(text)
+            else
+                let e = find_byte(text, 101)
+                let big = find_byte(text, 69)
+                let at = if e >= 0 then e else big
+                if at >= 0
+                    Some("${str.slice(text, 0, at)}.0${tail(text, at)}")
+                else
+                    Some("${text}.0")
+
+// A quoted string of the interface language as a Novo string literal.
+fn string_literal(text: Str) -> ?Str
+    let n = str.len(text)
+    if n < 2
+        return None
+    let q = str.byte_at_or(text, 0, 0)
+    if (q != 34 and q != 39) or str.byte_at_or(text, n - 1, 0) != q
+        return None
+    var out = "\""
+    for i in 1..(n - 1)
+        let c = str.byte_at_or(text, i, 0)
+        if c == 34 or c == 92 or c == 36
+            out = "${out}\\"
+        out = "${out}${str.from_byte(c)}"
+    Some("${out}\"")
+
+// The plain Novo literal for a value written in the definition, with
+// no cast: `5`, `1.5`, `true`, `"text"`.
+fn plain_literal(prim: Str, text: Str) -> Result<Str, Str>
+    if prim == "bool"
+        let b: Result<Str, Str> = match text
+            "true"  => Ok("true")
+            "True"  => Ok("true")
+            "false" => Ok("false")
+            "False" => Ok("false")
+            _       => Err("`${text}` is not a bool: write true or false")
+        return b
+    if prim == "string"
+        let q: Result<Str, Str> = match string_literal(text)
+            Some(s) => Ok(s)
+            None    => Err("`${text}` is not a quoted string")
+        return q
+    if prim == "float32" or prim == "float64"
+        let x: Result<Str, Str> = match float_literal(text)
+            Some(s) => Ok(s)
+            None    => Err("`${text}` is not a number")
+        return x
+    match parse_int(text)
+        None => Err("`${text}` is not an integer")
+        Some(v) =>
+            let r = int_range(prim)
+            if v < r.0 or v > r.1
+                Err("`${text}` does not fit ${prim}")
+            else
+                Ok(str.from_int(v))
+
+// The same literal as an expression of the field's own type.
+fn typed_literal(prim: Str, plain: Str) -> Str
+    let t = prim_type(prim)
+    if t == "Int" or t == "Bool" or t == "Float" or t == "Str"
+        plain
+    else if str.starts_with(plain, "-")
+        "(${plain}) as ${t}"
+    else
+        "${plain} as ${t}"
+
+// ---------------------------------------------------------------------
+// Types.
+
+// The type named by `text`, in a message of package `pkg`.
+fn parse_type(pkg: Str, text: Str) -> Result<TypeRef, Str>
+    var base = text
+    var shape = SHAPE_SCALAR
+    var count = 0
+    let open = find_byte(text, 91)
+    if open >= 0
+        base = str.slice(text, 0, open)
+        if not str.ends_with(text, "]")
+            return Err("`${text}`: an array's `[` has no closing `]`")
+        let inner = str.slice(text, open + 1, str.len(text) - 1)
+        if str.len(inner) == 0
+            shape = SHAPE_UNBOUNDED
+        else
+            var digits = inner
+            shape = SHAPE_FIXED
+            if str.starts_with(inner, "<=")
+                digits = tail(inner, 2)
+                shape = SHAPE_BOUNDED
+            let n = str.to_int(digits) ?? 0
+            if n < 1 or not is_digit(str.byte_at_or(digits, 0, 0))
+                return Err("`${text}`: an array's length is a positive integer")
+            count = n
+    var bound = -1
+    if str.contains(base, "<=")
+        if not str.starts_with(base, "string<=")
+            return Err("`${text}`: only a string takes a bound")
+        let b = str.to_int(tail(base, 8)) ?? 0
+        if b < 1 or not is_digit(str.byte_at_or(base, 8, 0))
+            return Err("`${text}`: a string's bound is a positive integer")
+        bound = b
+        base = "string"
+    if base == "wstring"
+        return Err("`wstring` is not supported: the encoding written here has no wide characters")
+    if is_primitive(base)
+        return Ok(TypeRef { prim: base, pkg: "", name: "", bound: bound, shape: shape, count: count })
+    let parts = str.split(base, "/")
+    var p = pkg
+    var m = base
+    if list.len(parts) == 2
+        p = parts[0]
+        m = parts[1]
+    else if list.len(parts) == 3 and parts[1] == "msg"
+        p = parts[0]
+        m = parts[2]
+    else if list.len(parts) != 1
+        return Err("`${text}` is not a type: write pkg/Name")
+    else if base == "Header"
+        p = "std_msgs"
+    if not pkg_ok(p) or not name_ok(m, 3)
+        return Err("`${text}` is not a type name")
+    Ok(TypeRef { prim: "", pkg: p, name: m, bound: bound, shape: shape, count: count })
+
+// ---------------------------------------------------------------------
+// Parsing a definition.
+
+// The comment of a line and the line without it.  A `#` inside a quoted
+// string starts no comment.
+fn split_comment(line: Str) -> (Str, Str)
+    var quote = 0
+    var skip = false
+    for i in 0..str.len(line)
+        let c = str.byte_at_or(line, i, 0)
+        if skip
+            skip = false
+        else if c == 92
+            skip = true
+        else if quote != 0
+            if c == quote
+                quote = 0
+        else if c == 34 or c == 39
+            quote = c
+        else if c == 35
+            return (str.slice(line, 0, i), str.trim(tail(line, i + 1)))
+    (line, "")
+
+// The elements of a default written as `[a, b, c]`, split at the
+// commas that are outside quotes.
+fn split_list(inner: Str) -> [Str]
+    var out: [Str] = []
+    var quote = 0
+    var start = 0
+    for i in 0..str.len(inner)
+        let c = str.byte_at_or(inner, i, 0)
+        if quote != 0
+            if c == quote
+                quote = 0
+        else if c == 34 or c == 39
+            quote = c
+        else if c == 44
+            list.push(out, str.trim(str.slice(inner, start, i)))
+            start = i + 1
+    list.push(out, str.trim(tail(inner, start)))
+    out
+
+// The default of a field, one Novo expression per element.
+fn parse_default(ty: TypeRef, text: Str) -> Result<[Str], Str>
+    let prim = ty.prim
+    if prim == ""
+        return Err("a field of a nested message has no default")
+    var out: [Str] = []
+    if prim == "string" and ty.shape != SHAPE_SCALAR
+        return Err("the default of an array of strings is not supported")
+    if ty.shape == SHAPE_SCALAR
+        let plain = plain_literal(prim, text)!
+        list.push(out, typed_literal(prim, plain))
+        return Ok(out)
+    if not (str.starts_with(text, "[") and str.ends_with(text, "]"))
+        return Err("the default of an array is a list in brackets")
+    let inner = str.trim(str.slice(text, 1, str.len(text) - 1))
+    if str.len(inner) == 0
+        return Ok(out)
+    let items = split_list(inner)
+    if ty.shape != SHAPE_UNBOUNDED and list.len(items) > ty.count
+        return Err("the default has more elements than the array holds")
+    if ty.shape == SHAPE_FIXED and list.len(items) != ty.count
+        return Err("the default of a fixed array has all ${ty.count} elements")
+    for item in items
+        let plain = plain_literal(prim, item)!
+        list.push(out, typed_literal(prim, plain))
+    Ok(out)
+
+// The comment text of a `#` line: the words after the hash.
+fn comment_text(line: Str) -> Str
+    str.trim(tail(str.trim(line), 1))
+
+// Parse the lines of one message.  `ros_name` is the name in ROS, and
+// `name` the struct's.
+fn parse_body(pkg: Str, kind: Str, ros_name: Str, name: Str,
+              lines: [Str]) -> Result<Message, Str>
+    var fields: [Field] = []
+    var consts: [Const] = []
+    var doc: [Str] = []
+    var pending: [Str] = []
+    var seen = false
+    var no = 0
+    for raw in lines
+        no = no + 1
+        let parts = split_comment(str.replace_all(raw, "\r", ""))
+        let code = str.trim(parts.0)
+        let note = parts.1
+        if str.len(code) == 0
+            if str.len(note) > 0
+                list.push(pending, note)
+            else
+                if not seen and list.len(doc) == 0
+                    doc = pending
+                pending = []
+        else
+            seen = true
+            let line = parse_line(pkg, code, note, pending)
+            pending = []
+            match line
+                Err(e) => return Err("line ${no}: ${e}")
+                Ok(item) =>
+                    match item.0
+                        Some(f) => list.push(fields, f)
+                        None    => list.push(consts, item.1)
+    if list.len(fields) == 0
+        let ty = TypeRef { prim: "uint8", pkg: "", name: "", bound: -1, shape: SHAPE_SCALAR, count: 0 }
+        list.push(fields, Field { ty: ty, name: "structure_needs_at_least_one_member",
+                                  has_default: false, defaults: [],
+                                  doc: ["rosidl gives an empty message one byte on the wire."] })
+    let type_name = "${pkg}/${kind}/${ros_name}"
+    let dds_name = "${pkg}::${kind}::dds_::${ros_name}_"
+    Ok(Message { pkg: pkg, ros_name: ros_name, name: name, type_name: type_name,
+                 dds_name: dds_name, fields: fields, consts: consts, doc: doc })
+
+// One line of code: a field, or a constant.  The answer is a pair: the
+// field if it is one, and the constant otherwise.
+fn parse_line(pkg: Str, code: Str, note: Str,
+              pending: [Str]) -> Result<(?Field, Const), Str>
+    let sp = find_space(code)
+    if sp < 0
+        return Err("`${code}` is a type with no name")
+    let ty_text = str.slice(code, 0, sp)
+    let rest = str.trim(tail(code, sp))
+    var end = 0
+    while end < str.len(rest) and not is_name_end(str.byte_at_or(rest, end, 0))
+        end = end + 1
+    let name = str.slice(rest, 0, end)
+    let after = str.trim(tail(rest, end))
+    var doc: [Str] = []
+    for p in pending
+        list.push(doc, p)
+    if str.len(note) > 0
+        list.push(doc, note)
+    let ty = parse_type(pkg, ty_text)!
+    let blank = Const { prim: "", name: "", expr: "", doc: [] }
+    if str.starts_with(after, "=")
+        if ty.prim == "" or ty.shape != SHAPE_SCALAR
+            return Err("a constant has a primitive type, not `${ty_text}`")
+        if not name_ok(name, 2)
+            return Err("`${name}` is not a constant name: use capitals and `_`")
+        let value = str.trim(tail(after, 1))
+        let plain = plain_literal(ty.prim, value)!
+        return Ok((None, Const { prim: ty.prim, name: name, expr: plain, doc: doc }))
+    if not name_ok(name, 1)
+        return Err("`${name}` is not a field name: use lowercase, digits and `_`")
+    var defaults: [Str] = []
+    if str.len(after) > 0
+        defaults = parse_default(ty, after)!
+    let f = Field { ty: ty, name: name, has_default: str.len(after) > 0,
+                    defaults: defaults, doc: doc }
+    Ok((Some(f), blank))
+
+// The first space or tab in `s`, or -1.
+fn find_space(s: Str) -> Int
+    for i in 0..str.len(s)
+        let c = str.byte_at_or(s, i, 0)
+        if c == 32 or c == 9
+            return i
+    -1
+
+// Whether a byte ends a name: a space, a tab or `=`.
+fn is_name_end(c: Int) -> Bool
+    c == 32 or c == 9 or c == 61
+
+// The lines of a text, with their line ends removed.
+fn text_lines(text: Str) -> [Str]
+    str.split(text, "\n")
+
+// Parse a `.msg` file.  `pkg` is the ROS package it belongs to and
+// `name` its file's name without the extension.
+//
+// ```novo
+// use msggen
+//
+// fn main() [io]
+//     match msggen.parse_msg("std_msgs", "String", "string data\n")
+//         Ok(m)  => println("${m.type_name} ${list.len(m.fields)}")
+//         Err(e) => println(e)
+// ```
+pub fn parse_msg(pkg: Str, name: Str, text: Str) -> Result<Message, Str>
+    if not pkg_ok(pkg) or not name_ok(name, 3)
+        return Err("`${pkg}/${name}` is not a message name")
+    parse_body(pkg, "msg", name, struct_name(name), text_lines(text))
+
+// Parse a `.srv` file into its request and its response, in that
+// order.  The two halves are divided by a line that is `---` and
+// nothing else.
+//
+// ```novo
+// use msggen
+//
+// fn main() [io]
+//     match msggen.parse_srv("example_interfaces", "AddTwoInts",
+//                            "int64 a\nint64 b\n---\nint64 sum\n")
+//         Ok(pair) => println("${pair[0].name} ${pair[1].name}")
+//         Err(e)   => println(e)
+// ```
+pub fn parse_srv(pkg: Str, name: Str, text: Str) -> Result<[Message], Str>
+    if not pkg_ok(pkg) or not name_ok(name, 3)
+        return Err("`${pkg}/${name}` is not a service name")
+    var request: [Str] = []
+    var response: [Str] = []
+    var in_response = false
+    var dividers = 0
+    for line in text_lines(text)
+        if str.trim(line) == "---"
+            dividers = dividers + 1
+            in_response = true
+        else if in_response
+            list.push(response, line)
+        else
+            list.push(request, line)
+    if dividers != 1
+        return Err("a service definition has exactly one `---` line, this one has ${dividers}")
+    let q = parse_body(pkg, "srv", "${name}_Request", "${name}Request", request)!
+    let p = parse_body(pkg, "srv", "${name}_Response", "${name}Response", response)!
+    Ok([q, p])
+
+// ---------------------------------------------------------------------
+// Names in the generated module.
+
+// The names of the types the language and its standard library declare:
+// the built-in types, and every struct, enum and trait in the standard
+// library's modules.  The compiler refuses a struct of the same name
+// (E2000), and a name in the list that a later release adds is refused
+// at the build of the generated module, where the fix is a rename here.
+// The primitive types the compiler knows without a declaration.
+const RESERVED_0 = " Char Number Never Array Tuple Slice Some None Ok Err Unit Void Any Self "
+const RESERVED_1 = " Adam Adapter AdapterKind Any ArrayF64 ArrayF64Iter ArrayI64 ArrayI64Iter ArrayI8 ArrayI8Iter Atomic "
+const RESERVED_2 = " Base64 BigInt BindGroup BindGroupLayout Bool BothConsole Buffer BufferedReader BufferedWriter "
+const RESERVED_3 = " ByteEnc Bytes Canvas CellMesh CellPool Chan Channel ChannelError ChipRuntime Cli CliArg CliCmd "
+const RESERVED_4 = " CliError CliFlag CliKind CliMatch Clone Close Codec CodecError Collection Connection Console "
+const RESERVED_5 = " CsvReader Cursor Database Date DbError DbValue DeadlineStream Debug Default Deque Deserialize "
+const RESERVED_6 = " DeserializeError Deserializer Device Display Dropout Duration EaseKind Embedding Encoder Eq Error "
+const RESERVED_7 = " EventKind FdStream File Float Fn FrameTarget From Future GpuBuffer Hash HashMapIntValuesIter "
+const RESERVED_8 = " HashMapStrBoolValuesIter HashMapStrFloatValuesIter HashMapStrIntEntriesIter HashMapStrIntEntry "
+const RESERVED_9 = " HashMapStrKeysIter HashMapStrValuesIter HashSetStrIter Hex HfHub HttpBody HttpBodyReader "
+const RESERVED_10 = " HttpChunkWriter HttpClient HttpConn HttpError HttpHeader HttpHostPort HttpMuxAsync HttpParam "
+const RESERVED_11 = " HttpPick HttpReply HttpReplyReader HttpRequest HttpResponse HttpRoute HttpRouteAsync HttpRouteMatch "
+const RESERVED_12 = " HttpRouter HttpServeOpts HttpServer HttpUrl HttpWire Instant Int Into IoBuf IoBuffer IoError "
+const RESERVED_13 = " Iterator JsonDoc LayerNorm Linear List ListIntIter ListIter LlmClient LlmSession LogFormat LogLevel "
+const RESERVED_14 = " LogRule LogSink Logger Map McpClient Module Mono NetError OnceIntIter Optimizer Option Ord Ordering "
+const RESERVED_15 = " Parameter Parse ParseError Pipeline PipelineLayout PipelineSet PipelineSetMvp Poll RangeIter Read "
+const RESERVED_16 = " Reader Rect Regex RegexDfa RegexEng RegexEsc RegexMatch RegexMatchIter RegexProg RegexRep RenderPass "
+const RESERVED_17 = " Result Ring RingBuffer RttConsole SGD SafeTensors Sampler Seek SeekFrom Self SemihostConsole "
+const RESERVED_18 = " Sequential Serialize Serializer Set Shader SqliteDb Status Str StrBytesIter StrCharsIter String "
+const RESERVED_19 = " Subprocess TcpListener TcpStream Texture TextureView ThemeSlot TimeScan TlsConfig TlsError TlsStream "
+const RESERVED_20 = " TomlDoc Tty TuiDots Tz UartConsole Ui Unit Vec VecStore Void WebSocket Window WordPiece Write Writer "
+const RESERVED_21 = " XmlDoc YamlDoc ZipReader Zoned regex "
+
+// Whether the language already has a type of this name.
+fn reserved_type(name: Str) -> Bool
+    let key = " ${name} "
+    str.contains(RESERVED_0, key)
+        or str.contains(RESERVED_1, key)
+        or str.contains(RESERVED_2, key)
+        or str.contains(RESERVED_3, key)
+        or str.contains(RESERVED_4, key)
+        or str.contains(RESERVED_5, key)
+        or str.contains(RESERVED_6, key)
+        or str.contains(RESERVED_7, key)
+        or str.contains(RESERVED_8, key)
+        or str.contains(RESERVED_9, key)
+        or str.contains(RESERVED_10, key)
+        or str.contains(RESERVED_11, key)
+        or str.contains(RESERVED_12, key)
+        or str.contains(RESERVED_13, key)
+        or str.contains(RESERVED_14, key)
+        or str.contains(RESERVED_15, key)
+        or str.contains(RESERVED_16, key)
+        or str.contains(RESERVED_17, key)
+        or str.contains(RESERVED_18, key)
+        or str.contains(RESERVED_19, key)
+        or str.contains(RESERVED_20, key)
+        or str.contains(RESERVED_21, key)
+
+// A struct's name for a message: the ROS name, with `Msg` after it where
+// the ROS name is the name of a type the language or its standard
+// library already has, such as `String` or `Duration`.  The compiler
+// refuses a struct of that name.
+//
+// ```novo
+// use msggen
+//
+// fn main() [io]
+//     println(msggen.struct_name("String"))   // StringMsg
+//     println(msggen.struct_name("Twist"))    // Twist
+// ```
+pub fn struct_name(ros: Str) -> Str
+    if reserved_type(ros)
+        "${ros}Msg"
+    else
+        ros
+
+// A field's name in the generated module: the ROS name, with `_`
+// after it where the language reserves the word.
+//
+// ```novo
+// use msggen
+//
+// fn main() [io]
+//     println(msggen.field_name("type"))   // type_
+//     println(msggen.field_name("x"))      // x
+// ```
+pub fn field_name(ros: Str) -> Str
+    match ros
+        "fn"        => "fn_"
+        "let"       => "let_"
+        "var"       => "var_"
+        "if"        => "if_"
+        "then"      => "then_"
+        "else"      => "else_"
+        "elif"      => "elif_"
+        "for"       => "for_"
+        "while"     => "while_"
+        "match"     => "match_"
+        "return"    => "return_"
+        "struct"    => "struct_"
+        "enum"      => "enum_"
+        "trait"     => "trait_"
+        "impl"      => "impl_"
+        "type"      => "type_"
+        "use"       => "use_"
+        "async"     => "async_"
+        "const"     => "const_"
+        "await"     => "await_"
+        "in"        => "in_"
+        "and"       => "and_"
+        "or"        => "or_"
+        "not"       => "not_"
+        "true"      => "true_"
+        "false"     => "false_"
+        "null"      => "null_"
+        "self"      => "self_"
+        "prompt"    => "prompt_"
+        "system"    => "system_"
+        "asm"       => "asm_"
+        "pass"      => "pass_"
+        "weak"      => "weak_"
+        "pub"       => "pub_"
+        "dyn"       => "dyn_"
+        "as"        => "as_"
+        "loop"      => "loop_"
+        "break"     => "break_"
+        "continue"  => "continue_"
+        "mut"       => "mut_"
+        "alias"     => "alias_"
+        "register"  => "register_"
+        "peripheral" => "peripheral_"
+        "bsp"       => "bsp_"
+        "static"    => "static_"
+        "error_kind" => "error_kind_"
+        "state_machine" => "state_machine_"
+        "memory_map" => "memory_map_"
+        "vector_table" => "vector_table_"
+        "unsafe_discharge" => "unsafe_discharge_"
+        _           => ros
+
+// A message name in capitals with an underscore at each lowercase-to-
+// uppercase step: `NavSatStatus` is `NAV_SAT_STATUS`.
+fn upper_snake(name: Str) -> Str
+    var out = ""
+    var prev = 0
+    for i in 0..str.len(name)
+        let c = str.byte_at_or(name, i, 0)
+        if is_upper(c) and (is_lower(prev) or is_digit(prev))
+            out = "${out}_"
+        out = "${out}${str.upper(str.from_byte(c))}"
+        prev = c
+    out
+
+// ---------------------------------------------------------------------
+// Generating a module.
+//
+// Before anything is written, every type is made definite: a string with
+// no bound takes `string_cap`, and a sequence with no bound becomes a
+// bounded one of `seq_cap`.  From then on `bound` and `count` are the
+// capacities of the generated storage.
+
+// The type with its capacities decided.
+fn settle(t: TypeRef, opt: GenOptions) -> TypeRef
+    var bound = t.bound
+    var shape = t.shape
+    var count = t.count
+    if t.prim == "string" and bound < 0
+        bound = opt.string_cap
+    if shape == SHAPE_UNBOUNDED
+        shape = SHAPE_BOUNDED
+        count = opt.seq_cap
+    TypeRef { prim: t.prim, pkg: t.pkg, name: t.name, bound: bound, shape: shape, count: count }
+
+// The Novo spelling of a message type, from a message of package `pkg`.
+fn nested_type(t: TypeRef, pkg: Str) -> Str
+    if t.pkg == pkg
+        struct_name(t.name)
+    else
+        "${t.pkg}.${struct_name(t.name)}"
+
+// The Novo type of one element of a field.
+fn elem_type(t: TypeRef, pkg: Str) -> Str
+    if t.prim == ""
+        nested_type(t, pkg)
+    else if t.prim == "string"
+        "String[${t.bound}]"
+    else
+        prim_type(t.prim)
+
+// The Novo type of a whole field.
+fn field_type(t: TypeRef, pkg: Str) -> Str
+    let e = elem_type(t, pkg)
+    if t.shape == SHAPE_SCALAR
+        e
+    else if t.shape == SHAPE_FIXED
+        "[${e}; ${t.count}]"
+    else
+        "Vec[${e}; ${t.count}]"
+
+// The zero of a scalar primitive, as an expression of its own type.
+fn prim_zero(prim: Str) -> Str
+    var plain = "0"
+    if prim == "bool"
+        plain = "false"
+    else if prim == "float32" or prim == "float64"
+        plain = "0.0"
+    typed_literal(prim, plain)
+
+// The comment lines for something with this documentation, indented.
+fn comment_lines(indent: Str, doc: [Str]) -> [Str]
+    var out: [Str] = []
+    for d in doc
+        list.push(out, if str.len(d) == 0 then "${indent}//" else "${indent}// ${d}")
+    out
+
+// Whether a type is a primitive that is neither a string nor nested.
+fn is_scalar(t: TypeRef) -> Bool
+    t.prim != "" and t.prim != "string"
+
+// The statement that writes one element, given the expression for it.
+fn put_elem(t: TypeRef, expr: Str) -> Str
+    if t.prim == ""
+        "${expr}.write_to(var w)"
+    else if t.prim == "string"
+        "put_str_${t.bound}(var w, ${expr})"
+    else
+        "w.put_${prim_op(t.prim)}(${expr})"
+
+// The lines that write a whole field.
+fn put_lines(t: TypeRef, fname: Str) -> [Str]
+    let me = "self.${fname}"
+    var out: [Str] = []
+    if t.shape == SHAPE_SCALAR
+        list.push(out, "        ${put_elem(t, me)}")
+    else if t.shape == SHAPE_FIXED
+        list.push(out, "        for i in 0..${t.count}")
+        list.push(out, "            ${put_elem(t, "${me}[i]")}")
+    else
+        list.push(out, "        w.put_count(${me}.len())")
+        list.push(out, "        for i in 0..${me}.len()")
+        list.push(out, "            ${put_elem(t, "${me}[i]")}")
+    out
+
+// The statement that reads one non-scalar element into the local `e`.
+fn read_into(t: TypeRef) -> Str
+    if t.prim == "string"
+        "get_str_${t.bound}(var r, var e)"
+    else
+        "e.read_from(var r)"
+
+// The lines that read a whole field.
+fn get_lines(t: TypeRef, fname: Str, pkg: Str) -> [Str]
+    let me = "self.${fname}"
+    var out: [Str] = []
+    if t.shape == SHAPE_SCALAR
+        if is_scalar(t)
+            list.push(out, "        ${me} = r.get_${prim_op(t.prim)}()")
+        else if t.prim == "string"
+            list.push(out, "        get_str_${t.bound}(var r, var ${me})")
+        else
+            list.push(out, "        ${me}.read_from(var r)")
+    else if t.shape == SHAPE_FIXED
+        list.push(out, "        for i in 0..${t.count}")
+        if is_scalar(t)
+            list.push(out, "            ${me}[i] = r.get_${prim_op(t.prim)}()")
+        else
+            list.push(out, "            var e = ${me}[i]")
+            list.push(out, "            ${read_into(t)}")
+            list.push(out, "            ${me}[i] = e")
+    else
+        list.push(out, "        let n_${fname} = r.get_count(${t.count})")
+        list.push(out, "        ${me}.clear()")
+        list.push(out, "        for _ in 0..n_${fname}")
+        if is_scalar(t)
+            list.push(out, "            let _ = ${me}.push(r.get_${prim_op(t.prim)}())")
+        else
+            list.push(out, "            var e: ${elem_type(t, pkg)} = ${elem_zero(t, pkg)}")
+            list.push(out, "            ${read_into(t)}")
+            list.push(out, "            let _ = ${me}.push(e)")
+    out
+
+// The zero value of one element, as an expression.
+fn elem_zero(t: TypeRef, pkg: Str) -> Str
+    if t.prim == ""
+        "${nested_type(t, pkg)}.new()"
+    else if t.prim == "string"
+        "String.new()"
+    else
+        prim_zero(t.prim)
+
+// The lines before the struct literal in `new` that build what the
+// literal cannot spell inline, and the expression for the field.  A
+// string or a sequence with contents is a local that is filled first,
+// and a fixed array of strings needs one empty string bound to a name.
+fn init_field(f: Field, t: TypeRef, fname: Str, pkg: Str) -> (Str, [Str])
+    var pre: [Str] = []
+    let ty = field_type(t, pkg)
+    if t.shape == SHAPE_SCALAR
+        if t.prim == "string" and f.has_default
+            list.push(pre, "        var d_${fname}: ${ty} = String.new()")
+            list.push(pre, "        let _ = d_${fname}.push_str(${f.defaults[0]})")
+            return ("d_${fname}", pre)
+        if f.has_default
+            return (f.defaults[0], pre)
+        return (elem_zero(t, pkg), pre)
+    if t.shape == SHAPE_FIXED
+        var items: [Str] = []
+        var zero = elem_zero(t, pkg)
+        if t.prim == "string"
+            list.push(pre, "        let z_${fname}: ${elem_type(t, pkg)} = String.new()")
+            zero = "z_${fname}"
+        for i in 0..t.count
+            list.push(items, if i < list.len(f.defaults) then f.defaults[i] else zero)
+        return ("[${str.join(items, ", ")}]", pre)
+    if list.len(f.defaults) > 0
+        list.push(pre, "        var d_${fname}: ${ty} = Vec.new()")
+        for d in f.defaults
+            list.push(pre, "        let _ = d_${fname}.push(${d})")
+        return ("d_${fname}", pre)
+    ("Vec.new()", pre)
+
+// The helpers that move a string of `cap` bytes.
+fn string_helpers(cap: Int) -> [Str]
+    [
+        "// Write a string of at most ${cap} bytes: its length with the NUL counted, the bytes, the NUL.",
+        "fn put_str_${cap}(var w: cdr.Writer, s: String[${cap}])",
+        "    let n = s.len()",
+        "    w.begin_string(n)",
+        "    for i in 0..n",
+        "        w.put_u8(s[i])",
+        "    w.end_string()",
+        "",
+        "// Read a string of at most ${cap} bytes into `s`, replacing what it held.",
+        "fn get_str_${cap}(var r: cdr.Reader, var s: String[${cap}])",
+        "    let n = r.begin_string(${cap})",
+        "    s.clear()",
+        "    for _ in 0..n",
+        "        let _ = s.push(r.get_u8())",
+        "    r.end_string()",
+        ""
+    ]
+
+// The text of one message: its constants, its struct and its methods.
+fn message_text(m: Message, opt: GenOptions) -> [Str]
+    var out: [Str] = []
+    let prefix = upper_snake(m.ros_name)
+    for c in m.consts
+        for l in comment_lines("", c.doc)
+            list.push(out, l)
+        list.push(out, "pub const ${prefix}_${c.name} = ${c.expr}")
+        list.push(out, "")
+    list.push(out, "// The ROS 2 message `${m.type_name}`.")
+    if list.len(m.doc) > 0
+        list.push(out, "//")
+        for l in comment_lines("", m.doc)
+            list.push(out, l)
+    list.push(out, "@value")
+    list.push(out, "pub struct ${m.name}")
+    var inits: [Str] = []
+    var pre: [Str] = []
+    var puts: [Str] = []
+    var gets: [Str] = []
+    for f in m.fields
+        let t = settle(f.ty, opt)
+        let fname = field_name(f.name)
+        var doc = f.doc[:]
+        if list.len(doc) == 0
+            doc = ["${f.name}"]
+        for l in comment_lines("    ", doc)
+            list.push(out, l)
+        list.push(out, "    ${fname}: ${field_type(t, m.pkg)}")
+        let init = init_field(f, t, fname, m.pkg)
+        for l in init.1
+            list.push(pre, l)
+        list.push(inits, "            ${fname}: ${init.0}")
+        for l in put_lines(t, fname)
+            list.push(puts, l)
+        for l in get_lines(t, fname, m.pkg)
+            list.push(gets, l)
+    list.push(out, "")
+    list.push(out, "impl ${m.name}")
+    list.push(out, "    // The name ROS 2 gives this message type.")
+    list.push(out, "    fn type_name() -> Str")
+    list.push(out, "        \"${m.type_name}\"")
+    list.push(out, "")
+    list.push(out, "    // The name DDS knows this message type by.")
+    list.push(out, "    fn dds_type_name() -> Str")
+    list.push(out, "        \"${m.dds_name}\"")
+    list.push(out, "")
+    list.push(out, "    // A message with every field at its default, which is zero unless the definition says otherwise.")
+    list.push(out, "    fn new() -> ${m.name}")
+    for l in pre
+        list.push(out, l)
+    list.push(out, "        ${m.name} {")
+    list.push(out, str.join(inits, ",\n"))
+    list.push(out, "        }")
+    list.push(out, "")
+    for l in sample_lines(m, opt)
+        list.push(out, l)
+    list.push(out, "    // Append this message's fields to `w`.  The encapsulation header is not written; the writer wrote it.")
+    list.push(out, "    fn write_to(self, var w: cdr.Writer)")
+    for l in puts
+        list.push(out, l)
+    list.push(out, "")
+    list.push(out, "    // Read this message's fields from `r` into `self`.")
+    list.push(out, "    fn read_from(var self, var r: cdr.Reader)")
+    for l in gets
+        list.push(out, l)
+    list.push(out, "")
+    list.push(out, "    // Write the message to `w` and answer the writer's status: `Success`, or the first thing that went wrong.")
+    list.push(out, "    fn encode(self, var w: cdr.Writer) -> cdr.Status")
+    list.push(out, "        self.write_to(var w)")
+    list.push(out, "        w.result()")
+    list.push(out, "")
+    list.push(out, "    // Read the message from `r` into `self` and answer the reader's status.")
+    list.push(out, "    fn decode_into(var self, var r: cdr.Reader) -> cdr.Status")
+    list.push(out, "        self.read_from(var r)")
+    list.push(out, "        r.result()")
+    list.push(out, "")
+    list.push(out, "    // Read a message from `r`, or answer None; the reason is `r.result()`.  The answer is")
+    list.push(out, "    // an optional value and not a `Result` because a `Result` that carries a value is a")
+    list.push(out, "    // heap cell on a device.")
+    list.push(out, "    fn decode(var r: cdr.Reader) -> ?${m.name}")
+    list.push(out, "        var m = ${m.name}.new()")
+    list.push(out, "        m.read_from(var r)")
+    list.push(out, "        if r.ok()")
+    list.push(out, "            return Some(m)")
+    list.push(out, "        None")
+    out
+
+// The string capacities some field of some message uses, each once.
+fn string_caps(msgs: [Message], opt: GenOptions) -> [Int]
+    var caps: [Int] = []
+    for m in msgs
+        for f in m.fields
+            let t = settle(f.ty, opt)
+            if t.prim == "string" and not list.contains(caps, t.bound)
+                list.push(caps, t.bound)
+    caps
+
+// The other packages the messages name, each once, in the order met.
+fn packages_used(msgs: [Message]) -> [Str]
+    var pkgs: [Str] = []
+    for m in msgs
+        for f in m.fields
+            let p = f.ty.pkg
+            if p != "" and p != m.pkg and not list.contains(pkgs, p)
+                list.push(pkgs, p)
+    pkgs
+
+// Generate the module for the messages of one ROS package.
+//
+// The text is deterministic: the same definitions and options give the
+// same bytes, which is what lets a test compare a generated module with
+// the one that is committed.  The module is named for the package, so
+// the caller writes it to `<pkg>.nv`.
+//
+// ```novo
+// use msggen
+//
+// fn main() [io]
+//     match msggen.parse_msg("std_msgs", "Int32", "int32 data\n")
+//         Ok(m) =>
+//             match msggen.generate("std_msgs", [m], msggen.default_options())
+//                 Ok(text) => println(text)
+//                 Err(e)   => println(e)
+//         Err(e) => println(e)
+// ```
+pub fn generate(pkg: Str, msgs: [Message], opt: GenOptions) -> Result<Str, Str>
+    if not pkg_ok(pkg)
+        return Err("`${pkg}` is not a package name")
+    if opt.string_cap < 1 or opt.seq_cap < 1
+        return Err("the capacities are at least 1")
+    var out: [Str] = []
+    list.push(out, "// ${pkg}.nv — the ROS 2 interfaces of ${pkg}, generated by msggen.")
+    list.push(out, "//")
+    list.push(out, "// Do not edit this file.  Change the definitions and generate it again.")
+    if list.len(opt.sources) > 0
+        list.push(out, "//")
+        list.push(out, "// Generated from:")
+        for s in opt.sources
+            list.push(out, "//   ${s}")
+    list.push(out, "//")
+    list.push(out, "// A string with no bound holds ${opt.string_cap} bytes and a sequence with no bound")
+    list.push(out, "// holds ${opt.seq_cap} elements.  A longer one on the wire is reported as TooLong.")
+    list.push(out, "")
+    list.push(out, "use cdr")
+    for p in packages_used(msgs)
+        list.push(out, "use ${opt.prefix}${p}")
+    list.push(out, "")
+    for cap in string_caps(msgs, opt)
+        for l in string_helpers(cap)
+            list.push(out, l)
+    for m in msgs
+        if m.pkg != pkg
+            return Err("`${m.type_name}` is not in the package `${pkg}`")
+        for l in message_text(m, opt)
+            list.push(out, l)
+        list.push(out, "")
+    Ok(str.join(out, "\n"))
+
+// ---------------------------------------------------------------------
+// Sample values, and the tests that use them.
+
+// A small number that differs by field and by element, and fits every
+// integer type: 1 to 100.
+fn sample_number(k: Int, j: Int) -> Int
+    (k + j) % 100 + 1
+
+// One element of a sample, as an expression.  `sname` is the local that
+// holds the sample string when the element is one.
+fn sample_elem(t: TypeRef, pkg: Str, k: Int, j: Int, sname: Str) -> Str
+    if t.prim == ""
+        "${nested_type(t, pkg)}.sample()"
+    else if t.prim == "string"
+        sname
+    else if t.prim == "bool"
+        "true"
+    else if t.prim == "float32" or t.prim == "float64"
+        typed_literal(t.prim, "${sample_number(k, j)}.5")
+    else
+        typed_literal(t.prim, str.from_int(sample_number(k, j)))
+
+// The lines before the struct literal in `sample`, and the expression
+// for field number `k`.
+fn sample_field(t: TypeRef, fname: Str, k: Int, pkg: Str) -> (Str, [Str])
+    var pre: [Str] = []
+    let sname = "s_${fname}"
+    if t.prim == "string"
+        list.push(pre, "        var ${sname}: String[${t.bound}] = String.new()")
+        list.push(pre, "        let _ = ${sname}.push_str(\"s${k}\")")
+    if t.shape == SHAPE_SCALAR
+        return (sample_elem(t, pkg, k, 0, sname), pre)
+    if t.shape == SHAPE_FIXED
+        var items: [Str] = []
+        for j in 0..t.count
+            list.push(items, sample_elem(t, pkg, k, j, sname))
+        return ("[${str.join(items, ", ")}]", pre)
+    let vname = "v_${fname}"
+    list.push(pre, "        var ${vname}: ${field_type(t, pkg)} = Vec.new()")
+    let n = if t.count < 2 then t.count else 2
+    for j in 0..n
+        list.push(pre, "        let _ = ${vname}.push(${sample_elem(t, pkg, k, j, sname)})")
+    (vname, pre)
+
+// The `sample` method of a message.
+fn sample_lines(m: Message, opt: GenOptions) -> [Str]
+    var out: [Str] = []
+    var pre: [Str] = []
+    var inits: [Str] = []
+    var k = 0
+    for f in m.fields
+        let t = settle(f.ty, opt)
+        let fname = field_name(f.name)
+        let s = sample_field(t, fname, k, m.pkg)
+        for l in s.1
+            list.push(pre, l)
+        list.push(inits, "            ${fname}: ${s.0}")
+        k = k + 1
+    list.push(out, "    // A message with every field set to a recognisable value that is not zero: strings of")
+    list.push(out, "    // text, sequences of two elements, numbers that differ by field.  A test round-trips it.")
+    list.push(out, "    fn sample() -> ${m.name}")
+    for l in pre
+        list.push(out, l)
+    list.push(out, "        ${m.name} {")
+    list.push(out, str.join(inits, ",\n"))
+    list.push(out, "        }")
+    list.push(out, "")
+    out
+
+// The text of a test module for the messages of one package: for each
+// message, a round trip of its sample in both byte orders, the checks of
+// its names, and the refusal of a message with its last byte cut off.
+//
+// The module is a test file, so it sits in `tests/` and reaches the
+// generated module as `interfaces.<pkg>`.
+pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
+    var out: [Str] = []
+    list.push(out, "// gen_${pkg}_tests.nv — the round trip of every message of ${pkg}, generated by msggen.")
+    list.push(out, "//")
+    list.push(out, "// Do not edit this file.  Change msggen or the definitions and generate it again.")
+    list.push(out, "//")
+    list.push(out, "// Each test encodes the message's `sample()` in little-endian and in big-endian")
+    list.push(out, "// CDR, decodes the bytes, encodes the result and compares the two byte strings,")
+    list.push(out, "// and checks that the same message with its last byte cut off is refused as")
+    list.push(out, "// truncated.")
+    list.push(out, "")
+    list.push(out, "use std.bytes")
+    list.push(out, "use std.test")
+    list.push(out, "use cdr")
+    list.push(out, "use cdrbytes")
+    list.push(out, "use ${opt.prefix}${pkg}")
+    list.push(out, "")
+    list.push(out, "fn writer(le: Bool) -> cdr.Writer")
+    list.push(out, "    if le")
+    list.push(out, "        cdr.writer_le()")
+    list.push(out, "    else")
+    list.push(out, "        cdr.writer_be()")
+    list.push(out, "")
+    list.push(out, "fn hex_of(w: cdr.Writer) -> Str")
+    list.push(out, "    bytes.to_hex(cdrbytes.to_bytes(w))")
+    list.push(out, "")
+    list.push(out, "// A reader over the writer's bytes with the last `cut` of them removed.")
+    list.push(out, "fn reader_of(w: cdr.Writer, cut: Int) -> cdr.Reader")
+    list.push(out, "    cdrbytes.reader_from_bytes(bytes.slice(cdrbytes.to_bytes(w), 0, w.len() - cut))")
+    list.push(out, "")
+    for m in msgs
+        let ty = "${pkg}.${m.name}"
+        list.push(out, "@test")
+        list.push(out, "fn test_${pkg}_${m.ros_name}() [io]")
+        list.push(out, "    let m = ${ty}.sample()")
+        list.push(out, "    test.assert_eq_str(${ty}.type_name(), \"${m.type_name}\")")
+        list.push(out, "    test.assert_eq_str(${ty}.dds_type_name(), \"${m.dds_name}\")")
+        list.push(out, "    for le in [true, false]")
+        list.push(out, "        var w = writer(le)")
+        list.push(out, "        test.assert_eq_str(cdr.status_name(m.encode(var w)), \"success\")")
+        list.push(out, "        var r = reader_of(w, 0)")
+        list.push(out, "        var back = ${ty}.new()")
+        list.push(out, "        test.assert_eq_str(cdr.status_name(back.decode_into(var r)), \"success\")")
+        list.push(out, "        test.assert_eq(r.remaining(), 0)")
+        list.push(out, "        var w2 = writer(le)")
+        list.push(out, "        test.assert_eq_str(cdr.status_name(back.encode(var w2)), \"success\")")
+        list.push(out, "        test.assert_eq_str(hex_of(w2), hex_of(w))")
+        list.push(out, "        var r2 = reader_of(w, 0)")
+        list.push(out, "        match ${ty}.decode(var r2)")
+        list.push(out, "            Some(x) =>")
+        list.push(out, "                var w3 = writer(le)")
+        list.push(out, "                let _ = x.encode(var w3)")
+        list.push(out, "                test.assert_eq_str(hex_of(w3), hex_of(w))")
+        list.push(out, "            None => test.fail(\"a whole message did not decode\")")
+        list.push(out, "        var r3 = reader_of(w, 1)")
+        list.push(out, "        match ${ty}.decode(var r3)")
+        list.push(out, "            Some(_) => test.fail(\"a truncated message decoded\")")
+        list.push(out, "            None    => test.assert_eq_str(cdr.status_name(r3.result()), \"truncated\")")
+        list.push(out, "")
+    str.join(out, "\n")
+
+// ---------------------------------------------------------------------
+// The command line.
+
+// What the program was asked to do.
+pub struct Job
+    // The ROS package the definitions belong to.
+    pkg: Str
+    // The file the module is written to.
+    out: Str
+    // The capacities and the module prefix.
+    opt: GenOptions
+    // The definition files, `.msg` and `.srv`.
+    files: [Str]
+    // The file the test module is written to, or empty for none.
+    tests_out: Str
+
+// Read the arguments after the program name:
+// `--package P --out F [--tests F] [--string-cap N] [--seq-cap N] [--prefix X] file...`.
+//
+// ```novo
+// use msggen
+//
+// fn main() [io]
+//     match msggen.parse_args(["--package", "std_msgs", "--out", "std_msgs.nv", "String.msg"])
+//         Ok(j)  => println("${j.pkg} ${list.len(j.files)}")
+//         Err(e) => println(e)
+// ```
+pub fn parse_args(args: [Str]) -> Result<Job, Str>
+    var pkg = ""
+    var out = ""
+    var tests_out = ""
+    var opt = default_options()
+    var files: [Str] = []
+    var i = 0
+    while i < list.len(args)
+        let a = args[i]
+        if str.starts_with(a, "--")
+            if i + 1 >= list.len(args)
+                return Err("${a} needs a value")
+            let v = args[i + 1]
+            if a == "--package"
+                pkg = v
+            else if a == "--out"
+                out = v
+            else if a == "--tests"
+                tests_out = v
+            else if a == "--prefix"
+                opt = GenOptions { string_cap: opt.string_cap, seq_cap: opt.seq_cap, prefix: v, sources: [] }
+            else if a == "--string-cap" or a == "--seq-cap"
+                let n = str.to_int(v) ?? 0
+                if n < 1
+                    return Err("${a} is a positive integer, not `${v}`")
+                if a == "--string-cap"
+                    opt = GenOptions { string_cap: n, seq_cap: opt.seq_cap, prefix: opt.prefix, sources: [] }
+                else
+                    opt = GenOptions { string_cap: opt.string_cap, seq_cap: n, prefix: opt.prefix, sources: [] }
+            else
+                return Err("unknown option ${a}")
+            i = i + 2
+        else
+            list.push(files, a)
+            i = i + 1
+    if pkg == "" or out == ""
+        return Err("usage: msggen --package P --out FILE [--tests FILE] [--string-cap N] [--seq-cap N] [--prefix X] DEFINITION...")
+    if list.len(files) == 0
+        return Err("no definition files")
+    Ok(Job { pkg: pkg, out: out, opt: opt, files: files, tests_out: tests_out })
+
+// The last component of a path.
+fn base_of(p: Str) -> Str
+    let parts = str.split(p, "/")
+    parts[list.len(parts) - 1]
+
+// The indices of `files` in the byte order of their last components, so
+// that the module does not depend on the order a shell listed them in.
+fn sorted_order(files: [Str]) -> [Int]
+    var order: [Int] = []
+    var taken: [Bool] = []
+    for _ in files
+        list.push(taken, false)
+    for _ in files
+        var best = -1
+        for i in 0..list.len(files)
+            if not taken[i] and (best < 0 or base_of(files[i]) < base_of(files[best]))
+                best = i
+        taken[best] = true
+        list.push(order, best)
+    order
+
+// Read the definitions of a job, given the text of each file in the
+// order the job lists them.  The messages come back in the byte order
+// of the file names, and the names are the second part of the answer.
+//
+// The message name is the file's name without its extension, and the
+// extension says which parser reads it.
+fn read_messages(job: Job, texts: [Str]) -> Result<([Message], [Str]), Str>
+    if list.len(texts) != list.len(job.files)
+        return Err("a text for every file")
+    var msgs: [Message] = []
+    var names: [Str] = []
+    for i in sorted_order(job.files)
+        let file = base_of(job.files[i])
+        list.push(names, file)
+        if str.ends_with(file, ".msg")
+            let name = str.slice(file, 0, str.len(file) - 4)
+            match parse_msg(job.pkg, name, texts[i])
+                Ok(x)  => list.push(msgs, x)
+                Err(e) => return Err("${file}: ${e}")
+        else if str.ends_with(file, ".srv")
+            let name = str.slice(file, 0, str.len(file) - 4)
+            match parse_srv(job.pkg, name, texts[i])
+                Ok(x)  =>
+                    list.push(msgs, x[0])
+                    list.push(msgs, x[1])
+                Err(e) => return Err("${file}: ${e}")
+        else
+            return Err("${file}: a definition ends in .msg or .srv")
+    Ok((msgs, names))
+
+// The job's options with the file names set as the sources.
+fn options_of(job: Job, names: [Str]) -> GenOptions
+    GenOptions { string_cap: job.opt.string_cap, seq_cap: job.opt.seq_cap,
+                 prefix: job.opt.prefix, sources: names }
+
+// Build the module a job asks for, given the text of each of its files
+// in the order the job lists them.
+pub fn build_module(job: Job, texts: [Str]) -> Result<Str, Str>
+    let read = read_messages(job, texts)!
+    generate(job.pkg, read.0, options_of(job, read.1))
+
+// Build the test module that goes with it.
+pub fn build_tests(job: Job, texts: [Str]) -> Result<Str, Str>
+    let read = read_messages(job, texts)!
+    Ok(generate_tests(job.pkg, read.0, options_of(job, read.1)))

@@ -1,0 +1,39 @@
+// main.nv — the msggen program: reads ROS 2 interface definitions and writes
+// a novo-lang module.
+//
+//   novo run src/main.nv -- --package std_msgs --out src/interfaces/std_msgs.nv \
+//       src/interfaces/std_msgs/msg/String.msg src/interfaces/std_msgs/msg/Header.msg
+//
+// All of the work is in the `msggen` module, which takes text and
+// answers text.  This file reads the files, calls it, and writes the
+// result, which is the part that needs an effect.
+
+use msggen
+use std.fs
+use std.env
+use std.process
+
+fn fail(why: Str) [io]
+    println("msggen: ${why}")
+    process.exit(1)
+
+fn main() [io, fs]
+    match msggen.parse_args(env.user_args())
+        Err(e) => fail(e)
+        Ok(job) =>
+            var texts: [Str] = []
+            for f in job.files
+                match fs.read(f)
+                    Some(t) => list.push(texts, t)
+                    None    => fail("cannot read ${f}")
+            match msggen.build_module(job, texts)
+                Err(e)   => fail(e)
+                Ok(text) =>
+                    if not fs.write(job.out, text)
+                        fail("cannot write ${job.out}")
+            if job.tests_out != ""
+                match msggen.build_tests(job, texts)
+                    Err(e)   => fail(e)
+                    Ok(text) =>
+                        if not fs.write(job.tests_out, text)
+                            fail("cannot write ${job.tests_out}")

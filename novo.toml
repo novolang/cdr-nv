@@ -1,0 +1,44 @@
+[package]
+name        = "cdr-nv"
+version     = "0.1.0"
+description = "Common Data Representation version 1 as ROS 2 messages travel in it: a writer and a reader over fixed-capacity buffers that allocate nothing, and msggen, which turns a ROS 2 .msg or .srv definition into novo-lang structs that encode and decode through them."
+license     = "Apache-2.0"
+
+stability   = "experimental"
+
+# `core`, with two host modules named below.
+#
+# The subject is a wire format, which is arithmetic over bytes a caller
+# already holds, so `cdr` and the message modules generated from it
+# declare no effect and build for the embedded tier.  A firmware node
+# that publishes a `geometry_msgs/Twist` needs the writer and nothing
+# else, and `tests/embedded_probe.nv` is the program that makes that a
+# thing the audit BUILDS.
+layer       = "core"
+
+# `cdrbytes` bridges the fixed-capacity `Writer` and `Reader` to the
+# standard library's `Bytes`, which the embedded runtime does not
+# define.  `msggen` parses interface definitions and builds the text of
+# a module, which concatenates strings.  Both are for a workstation.
+host_modules = ["cdrbytes", "msggen"]
+
+category    = "encoding"
+
+tags        = ["ros2", "ros", "cdr", "xcdr", "dds", "serialization",
+               "wire-format", "code-generator", "embedded", "no-alloc"]
+repository  = "https://github.com/novolang/cdr-nv"
+maintainers = ["novo-lang"]
+novo        = ">= 0.23.0"
+
+# The entry point is the generator program, `msggen`.  A package that
+# depends on this one never builds it: a dependency's entry point is not
+# built, and the modules are what it uses.
+main        = "src/main.nv"
+
+[docs.pages]
+"README.md" = "Writing and reading ROS 2 messages in Common Data Representation"
+
+[dependencies]
+# NONE.  The fixed-capacity buffers are `Vec[u8; N]`, which the
+# language provides, and the only other input is the standard library's
+# `Bytes` in the host module.
