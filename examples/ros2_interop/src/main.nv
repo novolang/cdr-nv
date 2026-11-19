@@ -1,0 +1,163 @@
+// main.nv — publishes a std_msgs/Int32 and a geometry_msgs/Twist, encoded
+// by cdr-nv, through ros2-nv's session to a Micro XRCE-DDS Agent.
+//
+//   MicroXRCEAgent tcp4 --port 2018
+//   novo run src/main.nv
+//   ros2 topic echo /cdr_int32 std_msgs/msg/Int32
+//   ros2 topic echo /cdr_twist geometry_msgs/msg/Twist
+//
+// The agent's host and port are the first two arguments, 127.0.0.1 and 2018
+// by default, and the DDS domain is ROS_DOMAIN_ID, 0 by default.
+//
+// What each package does.  cdr-nv turns a message into the bytes ROS 2
+// reads: the generated struct's `encode` writes them into a `cdr.Writer`.
+// ros2-nv carries bytes: it opens the session, asks the agent for a
+// participant, two topics, a publisher and two data writers, and sends a
+// sample to a writer.  ros2-nv does not read the sample, and cdr-nv does not
+// know the agent.
+//
+// The names are the ones ROS 2's middleware layer writes.  The DDS topic of
+// the ROS topic /cdr_int32 is `rt/cdr_int32` (`rosname.dds_topic_name`), and
+// the DDS type of a message is what the generated struct says it is
+// (`Int32.dds_type_name()`, `std_msgs::msg::dds_::Int32_`).
+//
+// The sample is the message WITHOUT its four-byte encapsulation header:
+// the agent writes `00 01 00 00` in front itself.  The writer here is
+// little-endian to match, and `payload` drops its header.  The alignment of
+// a field is counted from the end of that header, so the bytes are the same
+// either way.
+
+use std.bytes
+use std.env
+use std.str
+use std.time
+use cdr
+use cdrbytes
+use geometry_msgs
+use std_msgs
+use rosagent
+use rosname
+use rostransport
+use xrcewire
+
+// The DDS domain the participant joins: ROS_DOMAIN_ID, 0 when it is unset.
+fn domain() -> Int [io]
+    str.to_int(env.get_or("ROS_DOMAIN_ID", "0")) ?? 0
+
+const PARTICIPANT = 0x11
+const PUBLISHER = 0x13
+
+// A topic is object 0x12 and 0x22, its writer 0x15 and 0x25: the number
+// in the high twelve bits and the kind in the low four.
+const INT_TOPIC = 0x12
+const INT_WRITER = 0x15
+const TWIST_TOPIC = 0x22
+const TWIST_WRITER = 0x25
+
+const INT_NAME = "/cdr_int32"
+const TWIST_NAME = "/cdr_twist"
+
+// The message's bytes after the encapsulation header.
+fn payload(w: cdr.Writer) -> Bytes
+    bytes.slice(cdrbytes.to_bytes(w), cdr.HEADER_LEN, w.len())
+
+// The XML of a topic: the DDS name of the ROS topic and the DDS type.
+fn topic_xml(ros_name: Str, dds_type: Str) -> Str
+    "<dds><topic><name>${rosname.dds_topic_name(ros_name)}</name><dataType>${dds_type}</dataType></topic></dds>"
+
+// The XML of a data writer on that topic.
+fn writer_xml(ros_name: Str, dds_type: Str) -> Str
+    "<dds><data_writer><topic><kind>NO_KEY</kind><name>${rosname.dds_topic_name(ros_name)}</name><dataType>${dds_type}</dataType></topic></data_writer></dds>"
+
+fn say(what: Str, out: RosOutcome) [io]
+    println("${what}: code ${out.code}, agent status ${out.status} (${xrcewire.status_name(out.status)})")
+
+// The Int32 of step `n`.
+fn int_message(n: Int) -> std_msgs.Int32
+    std_msgs.Int32 { data: (1000 + n) as i32 }
+
+// The Twist of step `n`: a velocity that grows with `n` and a turn about z
+// that deepens with it, so that the six numbers differ from each other.
+fn twist_message(n: Int) -> geometry_msgs.Twist
+    let step = n as Float
+    geometry_msgs.Twist {
+        linear: geometry_msgs.Vector3 { x: 0.5 + step, y: -1.25, z: 2.0 },
+        angular: geometry_msgs.Vector3 { x: 0.25, y: 0.75, z: -0.125 * (step + 1.0) } }
+
+// Create one topic and its data writer, on the session `s`, and answer the
+// session after them, or None when the agent refused either.
+fn make_writer(link: RosAgentLink, s: RosSession, topic: Int, writer: Int, ros_name: Str,
+               dds_type: Str) -> ?RosSession [net, io]
+    let t = rostransport.create_entity(link, s, topic, xrcewire.XRCE_KIND_TOPIC, PARTICIPANT,
+                                       topic_xml(ros_name, dds_type), 2000)
+    say("topic ${ros_name}", t)
+    if t.code != 0
+        return None
+    let w = rostransport.create_entity(link, t.session, writer, xrcewire.XRCE_KIND_DATAWRITER,
+                                       PUBLISHER, writer_xml(ros_name, dds_type), 2000)
+    say("datawriter ${ros_name}", w)
+    if w.code != 0
+        return None
+    Some(w.session)
+
+fn main() [net, io, time]
+    let args = env.args()
+    var host = "127.0.0.1"
+    var port = 2018
+    // args[0] is the program itself.
+    if list.len(args) > 1
+        host = args[1]
+    if list.len(args) > 2
+        port = str.to_int(args[2]) ?? 2018
+    match rosagent.connect(host, port)
+        None       => println("no agent at ${host}:${port}")
+        Some(link) =>
+            talk(link)
+            rosagent.disconnect(link)
+
+fn talk(link: RosAgentLink) [net, io, time]
+    var s = rostransport.session(0xAABBCCDD, rosagent.ROS_AGENT_MTU)
+    s = rostransport.open_session(link, s, 2000)
+    println("session: ${rostransport.session_state_name(s.state)}")
+    if not rostransport.session_is_ready(s)
+        return
+    let participant = rostransport.create_entity(link, s, PARTICIPANT,
+        xrcewire.XRCE_KIND_PARTICIPANT, domain(),
+        "<dds><participant><rtps><name>cdr_interop</name></rtps></participant></dds>", 2000)
+    say("participant", participant)
+    if participant.code != 0
+        return
+    let publisher = rostransport.create_entity(link, participant.session, PUBLISHER,
+        xrcewire.XRCE_KIND_PUBLISHER, PARTICIPANT, "", 2000)
+    say("publisher", publisher)
+    if publisher.code != 0
+        return
+    let first = make_writer(link, publisher.session, INT_TOPIC, INT_WRITER, INT_NAME,
+                            std_msgs.Int32.dds_type_name())
+    if first == None
+        return
+    let second = make_writer(link, first ?? s, TWIST_TOPIC, TWIST_WRITER, TWIST_NAME,
+                             geometry_msgs.Twist.dds_type_name())
+    if second == None
+        return
+    s = second ?? s
+    println("${INT_NAME}: ${std_msgs.Int32.type_name()}, ${TWIST_NAME}: ${geometry_msgs.Twist.type_name()}")
+    // Long enough for the agent's writers to find a subscriber before the
+    // first sample, which a best-effort stream does not repeat.
+    time.sleep(1.0)
+    var n = 0
+    while n < 10
+        var wi = cdr.writer_le()
+        let ci = int_message(n).encode(var wi)
+        var wt = cdr.writer_le()
+        let ct = twist_message(n).encode(var wt)
+        if ci != cdr.Status.Success or ct != cdr.Status.Success
+            println("encode failed: ${cdr.status_name(ci)}, ${cdr.status_name(ct)}")
+            return
+        let oi = rostransport.write_sample(link, s, INT_WRITER, payload(wi))
+        let ot = rostransport.write_sample(link, oi.session, TWIST_WRITER, payload(wt))
+        s = ot.session
+        println("published ${n}: Int32 ${bytes.to_hex(payload(wi))} code ${oi.code}, Twist ${bytes.to_hex(payload(wt))} code ${ot.code}")
+        n = n + 1
+        time.sleep(1.0)
+    s = rostransport.close_session(link, s)

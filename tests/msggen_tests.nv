@@ -32,17 +32,9 @@ fn aerr(r: Result<msggen.Job, Str>) -> Str
         Err(e) => e
 
 // The first field of a message, as the parser read it.
-//
-// The refusal arm builds a field by hand instead of unwrapping a second
-// parse with `!`, which is what this arm should say.
-// workaround(match-arm-unwrap-leaks-the-ok-arm-element): the `!` in a
-// match arm that does not run makes the leak check fail after the tests
-// pass; write the arm with `!` again when the filing is fixed.
 fn first_field(text: Str) -> msggen.Field
-    let none = msggen.TypeRef { prim: "", pkg: "", name: "", bound: -1, shape: 0, count: 0 }
-    match msggen.parse_msg("p", "M", text)
-        Ok(m)  => m.fields[0]
-        Err(_) => msggen.Field { ty: none, name: "", has_default: false, defaults: [], doc: [] }
+    let m = msggen.parse_msg("p", "M", text)!
+    m.fields[0]
 
 @test
 fn test_primitive_types_and_shapes() [io]

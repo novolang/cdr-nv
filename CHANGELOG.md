@@ -5,6 +5,42 @@ All notable changes to cdr-nv are recorded here. The format is
 package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 with the pre-1.0 rule that a breaking change bumps the MINOR number.
 
+## 0.1.1 — 2026-11-19
+
+### Added
+
+- `scripts/rclpy_vectors.py`, `tests/jazzy_vectors.tsv` and
+  `tests/jazzy_vectors_<package>_tests.nv`: 168 vectors from the ROS 2 Jazzy
+  middleware. The script builds one instance of every bundled message and of
+  every service request and response (104 types) with each field set to a
+  value other than its default, has `rclpy.serialization.serialize_message`
+  serialise it, and writes the values into the tests and the bytes into the
+  TSV. For each of the 64 types that has a string or a sequence it also builds
+  an instance in which each is as long as the generated field holds. A test
+  builds the message from the values and compares its encoding with the
+  middleware's bytes, decodes the middleware's bytes and checks every field,
+  encodes the result again, and sends it through the other byte order and
+  back. The TSV is checked in, so the tests need no ROS 2.
+- `examples/ros2_interop/`: a program that encodes a `std_msgs/Int32` and a
+  `geometry_msgs/Twist` with this package and publishes them through ros2-nv
+  0.1.1's session to a Micro XRCE-DDS Agent over TCP, where `ros2 topic echo`
+  prints them. It is a package of its own, so this package's
+  `[dependencies]` stays empty. `docs/ros2-interop.md` has the commands and a
+  run.
+
+### Fixed
+
+- The README said that nothing pads the end of a message and that an empty
+  message is one byte, and did not say that the middleware's serialiser pads a
+  payload of fewer than four bytes to four. The 104 types were compared with
+  the middleware's bytes and none differed in a field, a length or an
+  alignment; the one difference is those trailing zero bytes (a
+  `std_msgs/Int8` is eight bytes with its header from the middleware and five
+  from this package, and both read back). Rules 4 and 13 now say so.
+- `tests/msggen_tests.nv` carried a `workaround` tag for a language bug that
+  is closed since; the helper it excused is written the plain way, and the
+  shard audit's `workaround-stale` row passes.
+
 ## 0.1.0 — 2026-11-10
 
 The first release.

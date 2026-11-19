@@ -1,6 +1,6 @@
 [package]
 name        = "cdr-nv"
-version     = "0.1.0"
+version     = "0.1.1"
 description = "Common Data Representation version 1 as ROS 2 messages travel in it: a writer and a reader over fixed-capacity buffers that allocate nothing, and msggen, which turns a ROS 2 .msg or .srv definition into novo-lang structs that encode and decode through them."
 license     = "Apache-2.0"
 
@@ -37,6 +37,7 @@ novo        = ">= 0.23.0"
 
 [docs.pages]
 "README.md" = "Writing and reading ROS 2 messages in Common Data Representation"
+"docs/ros2-interop.md" = "A std_msgs/Int32 and a geometry_msgs/Twist from cdr-nv, published through ros2-nv and read by ros2 topic echo"
 
 [dependencies]
 # NONE.  The fixed-capacity buffers are `Vec[u8; N]`, which the

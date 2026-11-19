@@ -1,0 +1,20 @@
+[package]
+name        = "ros2-interop"
+version     = "0.1.0"
+description = "A std_msgs/Int32 and a geometry_msgs/Twist, encoded by cdr-nv and published through ros2-nv's session to a Micro XRCE-DDS Agent over TCP, where ros2 topic echo reads them."
+license     = "Apache-2.0"
+stability   = "experimental"
+main        = "src/main.nv"
+
+# A program of its own, so that cdr-nv's [dependencies] stays empty: this is
+# the one place the two packages meet.  Build and run it from this folder:
+#
+#   MicroXRCEAgent tcp4 --port 2018 -v 6
+#   novo run src/main.nv
+#   ros2 topic echo /cdr_int32 std_msgs/msg/Int32
+#   ros2 topic echo /cdr_twist geometry_msgs/msg/Twist
+#
+# ../../docs/ros2-interop.md has a run, with its output.
+[dependencies]
+cdr-nv   = { path = "../.." }
+ros2-nv  = "^0.1.1"

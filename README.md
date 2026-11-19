@@ -152,7 +152,11 @@ bundled set.
    doubles and nothing else. `float64[]` and `float64[<=3]` are a `uint32`
    count and then the doubles.
 4. **Nothing pads the end of a message.** A message that ends after a one-byte
-   field is that many bytes long, and the length is not rounded up.
+   field is that many bytes long, and the length is not rounded up. The
+   middleware's own serialiser adds zero bytes to a payload of fewer than four
+   bytes to make it four (a `std_msgs/Int8` is eight bytes with its header),
+   and this package does not. The reader takes either form, and so does the
+   middleware: `tests/jazzy_vectors.tsv` was checked to read the shorter one.
 5. **The capacity is fixed when the module is generated.** An unbounded string
    holds `--string-cap` bytes (default 64) and an unbounded sequence
    `--seq-cap` elements (default 16). A longer one on the wire is `TooLong`.
@@ -181,7 +185,9 @@ bundled set.
     `CharMsg` and `builtin_interfaces/Duration` is `DurationMsg`. A field named
     for a reserved word gets `_` after it: `type` is `type_`.
 13. **An empty message is one byte.** `std_msgs/Empty` has a single `uint8`
-    named `structure_needs_at_least_one_member`, because `rosidl` adds one.
+    named `structure_needs_at_least_one_member`, because `rosidl` adds one. The
+    middleware serialises it as four bytes of zeros after the header, by the
+    rule of rule 4.
 14. **`byte`, `char` and `uint8` are all a `u8`.** Each is one byte and none is
     padded.
 15. **A service is two structs.** `std_srvs`'s `SetBool.srv` is `SetBoolRequest`
@@ -248,7 +254,11 @@ part with 64 KB of RAM, declare one of each and reuse them.
 - **ros2-nv** is the ROS 2 node model for a microcontroller. Its `rosmsg` holds
   a serialised message and the header that names its byte order, and a program
   gets the bytes from `cdrbytes.to_bytes` or reads them with
-  `cdrbytes.reader_from_bytes`.
+  `cdrbytes.reader_from_bytes`. `examples/ros2_interop/` is a program that
+  uses both: it encodes a `std_msgs/Int32` and a `geometry_msgs/Twist` with this
+  package and publishes them through ros2-nv's session, and `ros2 topic echo`
+  prints them. [docs/ros2-interop.md](docs/ros2-interop.md) has the commands and
+  a dated run.
 - **cbor-nv** and **postcard-nv** are other binary formats for a constrained
   device. CDR is the one DDS and ROS 2 fix, so a node that talks to ROS 2 uses
   this one.
@@ -267,6 +277,26 @@ One vector is captured and not derived: the bytes of a `tf2_msgs/TFMessage`
 carrying one `TransformStamped`, from `src/CdrWriter.test.ts` in the
 [foxglove/cdr](https://github.com/foxglove/cdr) repository. The code here
 produces them byte for byte.
+
+`tests/jazzy_vectors_<package>_tests.nv` check the package against the ROS 2
+Jazzy middleware itself. `scripts/rclpy_vectors.py` builds one instance of every
+bundled message and every service request and response with each field set to a
+value other than its default, has `rclpy.serialization.serialize_message` (Fast
+CDR, through `rmw_fastrtps_cpp`) serialise it, and writes the values into the
+tests and the bytes into `tests/jazzy_vectors.tsv`: 168 rows, of which 104 are
+the 104 types and 64 are a second instance of a type with a string or a
+sequence, each as long as the generated field holds. Each test builds the
+message from the values and checks that it encodes to the middleware's bytes,
+decodes the middleware's bytes and checks every field, encodes the result again,
+and sends the message through the other byte order and back. The TSV says where
+each row came from, so the tests run without ROS 2. Two things in the bytes are
+not compared. Fast CDR leaves the bytes it skips to align a value as its buffer
+held them (the same message gave `84` in one run and `9c` in the next), so the
+script writes them as zero after finding them from the values, and checks that
+the middleware reads the result. And it pads a payload of fewer than four bytes
+to four, which the test accepts as the end of a vector and this package does not
+write (rule 4). The middleware writes little-endian here, so the other byte
+order is checked by the round trip and not against it.
 
 `tests/cdr_tests.nv` covers the primitives, both byte orders, the alignment
 arithmetic, `float32` patterns including the subnormals, and every status the
