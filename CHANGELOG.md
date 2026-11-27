@@ -5,6 +5,12 @@ All notable changes to cdr-nv are recorded here. The format is
 package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 with the pre-1.0 rule that a breaking change bumps the MINOR number.
 
+## 0.1.2 — 2026-11-27
+
+### Changed
+
+- The README program drops the `Result` of `push_str` with `let _ =` and a comment that says why: the text fits the 64 bytes the field holds.  The binding that no line read is gone.  No signature of the package changed.
+
 ## 0.1.1 — 2026-11-19
 
 ### Added

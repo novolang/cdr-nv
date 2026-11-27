@@ -80,6 +80,7 @@ use std_msgs
 fn main() [io]
     // A message, with its text in the fixed-capacity string the field holds.
     var text: String[64] = String.new()
+    // "hello" fits the 64 bytes the field holds.
     let _ = text.push_str("hello")
     let msg = std_msgs.StringMsg { data: text }
 

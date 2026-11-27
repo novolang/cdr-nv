@@ -1,6 +1,6 @@
 [package]
 name        = "cdr-nv"
-version     = "0.1.1"
+version     = "0.1.2"
 description = "Common Data Representation version 1 as ROS 2 messages travel in it: a writer and a reader over fixed-capacity buffers that allocate nothing, and msggen, which turns a ROS 2 .msg or .srv definition into novo-lang structs that encode and decode through them."
 license     = "Apache-2.0"
 
