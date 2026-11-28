@@ -10,6 +10,7 @@ with the pre-1.0 rule that a breaking change bumps the MINOR number.
 ### Changed
 
 - The README program drops the `Result` of `push_str` with `let _ =` and a comment that says why: the text fits the 64 bytes the field holds.  The binding that no line read is gone.  No signature of the package changed.
+- Each function of `cdrbytes` and of `msggen`, the two modules `host_modules` names, carries `@tier(app)`.  A project at the embedded tier that holds the package builds: `cdr` and the generated message modules stay at the embedded tier, and the two host modules are for a workstation.  No signature of the package changed.
 
 ## 0.1.1 — 2026-11-19
 

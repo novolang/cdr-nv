@@ -23,7 +23,8 @@ use cdr
 //     w.put_u16(258 as u16)
 //     println(bytes.to_hex(cdrbytes.to_bytes(w)))   // 000100000201
 // ```
-pub fn to_bytes(w: Writer) -> Bytes
+pub @tier(app)
+fn to_bytes(w: Writer) -> Bytes
     var c = bytes.cursor_le(bytes.zeros(w.len()))
     for i in 0..w.len()
         c.put_u8(w.byte(i) as Int)
@@ -43,7 +44,8 @@ pub fn to_bytes(w: Writer) -> Bytes
 //     var r = cdrbytes.reader_from_bytes(wire)
 //     println("${r.get_i32()}")   // 7
 // ```
-pub fn reader_from_bytes(src: Bytes) -> Reader
+pub @tier(app)
+fn reader_from_bytes(src: Bytes) -> Reader
     var v: Vec[u8; CDR_CAP] = Vec.new()
     let n = bytes.len(src)
     let keep = if n > CDR_CAP

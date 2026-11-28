@@ -131,18 +131,22 @@ pub struct GenOptions
 
 // The options a first generation uses: 64-byte strings, 16-element
 // sequences, and the other packages' modules beside the generated one.
-pub fn default_options() -> GenOptions
+pub @tier(app)
+fn default_options() -> GenOptions
     GenOptions { string_cap: 64, seq_cap: 16, prefix: "", sources: [], pool: [] }
 
 // ---------------------------------------------------------------------
 // Characters.
 
+@tier(app)
 fn is_digit(c: Int) -> Bool
     c >= 48 and c <= 57
 
+@tier(app)
 fn is_lower(c: Int) -> Bool
     c >= 97 and c <= 122
 
+@tier(app)
 fn is_upper(c: Int) -> Bool
     c >= 65 and c <= 90
 
@@ -150,6 +154,7 @@ fn is_upper(c: Int) -> Bool
 // name, 2 uppercase constant, 3 camel-case message.  The first byte
 // must be a letter, and `_` is allowed after it except where the class
 // forbids it.
+@tier(app)
 fn name_ok(s: Str, kind: Int) -> Bool
     let n = str.len(s)
     if n == 0
@@ -168,10 +173,12 @@ fn name_ok(s: Str, kind: Int) -> Bool
     true
 
 // Whether `s` is a name of a package: lowercase, digits and `_`.
+@tier(app)
 fn pkg_ok(s: Str) -> Bool
     name_ok(s, 1)
 
 // The first index of the byte `ch` in `s`, or -1.
+@tier(app)
 fn find_byte(s: Str, ch: Int) -> Int
     for i in 0..str.len(s)
         if str.byte_at_or(s, i, 0) == ch
@@ -179,6 +186,7 @@ fn find_byte(s: Str, ch: Int) -> Int
     -1
 
 // The text of `s` from `lo` to the end.
+@tier(app)
 fn tail(s: Str, lo: Int) -> Str
     str.slice(s, lo, str.len(s))
 
@@ -186,6 +194,7 @@ fn tail(s: Str, lo: Int) -> Str
 // Primitives.
 
 // Whether `t` names a primitive type of the interface language, `string` included.
+@tier(app)
 fn is_primitive(t: Str) -> Bool
     match t
         "bool"    => true
@@ -205,6 +214,7 @@ fn is_primitive(t: Str) -> Bool
         _         => false
 
 // The Novo type of a primitive scalar.
+@tier(app)
 fn prim_type(t: Str) -> Str
     match t
         "bool"    => "Bool"
@@ -223,6 +233,7 @@ fn prim_type(t: Str) -> Str
         _         => "Str"
 
 // The suffix of `put_` and `get_` that moves a primitive.
+@tier(app)
 fn prim_op(t: Str) -> Str
     match t
         "bool"    => "bool"
@@ -242,6 +253,7 @@ fn prim_op(t: Str) -> Str
 // The inclusive range of an integer primitive, as (low, high).  The
 // 64-bit unsigned type stops at the largest `Int`, because the
 // language has no unsigned 64-bit literal.
+@tier(app)
 fn int_range(t: Str) -> (Int, Int)
     match t
         "byte"   => (0, 255)
@@ -257,6 +269,7 @@ fn int_range(t: Str) -> (Int, Int)
 
 // An integer written as decimal or as `0x` hexadecimal, with an
 // optional leading minus.
+@tier(app)
 fn parse_int(text: Str) -> ?Int
     var s = text
     var neg = false
@@ -290,6 +303,7 @@ fn parse_int(text: Str) -> ?Int
 
 // A float written in the interface language, as a Novo literal: the
 // digits, a point, and an exponent if there was one.
+@tier(app)
 fn float_literal(text: Str) -> ?Str
     if str.len(text) == 0
         return None
@@ -316,6 +330,7 @@ fn float_literal(text: Str) -> ?Str
                     Some("${text}.0")
 
 // A quoted string of the interface language as a Novo string literal.
+@tier(app)
 fn string_literal(text: Str) -> ?Str
     let n = str.len(text)
     if n < 2
@@ -333,6 +348,7 @@ fn string_literal(text: Str) -> ?Str
 
 // The plain Novo literal for a value written in the definition, with
 // no cast: `5`, `1.5`, `true`, `"text"`.
+@tier(app)
 fn plain_literal(prim: Str, text: Str) -> Result<Str, Str>
     if prim == "bool"
         let b: Result<Str, Str> = match text
@@ -362,6 +378,7 @@ fn plain_literal(prim: Str, text: Str) -> Result<Str, Str>
                 Ok(str.from_int(v))
 
 // The same literal as an expression of the field's own type.
+@tier(app)
 fn typed_literal(prim: Str, plain: Str) -> Str
     let t = prim_type(prim)
     if t == "Int" or t == "Bool" or t == "Float" or t == "Str"
@@ -375,6 +392,7 @@ fn typed_literal(prim: Str, plain: Str) -> Str
 // Types.
 
 // The type named by `text`, in a message of package `pkg`.
+@tier(app)
 fn parse_type(pkg: Str, text: Str) -> Result<TypeRef, Str>
     var base = text
     var shape = SHAPE_SCALAR
@@ -432,6 +450,7 @@ fn parse_type(pkg: Str, text: Str) -> Result<TypeRef, Str>
 
 // The comment of a line and the line without it.  A `#` inside a quoted
 // string starts no comment.
+@tier(app)
 fn split_comment(line: Str) -> (Str, Str)
     var quote = 0
     var skip = false
@@ -453,6 +472,7 @@ fn split_comment(line: Str) -> (Str, Str)
 // The elements of a default written as `[a, b, c]`.  A default of an
 // array of strings is refused before this is called, so no element has
 // a comma inside it.
+@tier(app)
 fn split_list(inner: Str) -> [Str]
     var out: [Str] = []
     for item in str.split(inner, ",")
@@ -460,6 +480,7 @@ fn split_list(inner: Str) -> [Str]
     out
 
 // The default of a field, one Novo expression per element.
+@tier(app)
 fn parse_default(ty: TypeRef, text: Str) -> Result<[Str], Str>
     let prim = ty.prim
     if prim == ""
@@ -488,6 +509,7 @@ fn parse_default(ty: TypeRef, text: Str) -> Result<[Str], Str>
 
 // Parse the lines of one message.  `ros_name` is the name in ROS, and
 // `name` the struct's.
+@tier(app)
 fn parse_body(pkg: Str, kind: Str, ros_name: Str, name: Str, lines: [Str]) -> Result<Message, Str>
     var fields: [Field] = []
     var consts: [Const] = []
@@ -530,6 +552,7 @@ fn parse_body(pkg: Str, kind: Str, ros_name: Str, name: Str, lines: [Str]) -> Re
 
 // One line of code: a field, or a constant.  The answer is a pair: the
 // field if it is one, and the constant otherwise.
+@tier(app)
 fn parse_line(pkg: Str, code: Str, note: Str, pending: [Str]) -> Result<(?Field, Const), Str>
     let sp = find_space(code)
     if sp < 0
@@ -566,6 +589,7 @@ fn parse_line(pkg: Str, code: Str, note: Str, pending: [Str]) -> Result<(?Field,
     Ok((Some(f), blank))
 
 // The first space or tab in `s`, or -1.
+@tier(app)
 fn find_space(s: Str) -> Int
     for i in 0..str.len(s)
         let c = str.byte_at_or(s, i, 0)
@@ -574,10 +598,12 @@ fn find_space(s: Str) -> Int
     -1
 
 // Whether a byte ends a name: a space, a tab or `=`.
+@tier(app)
 fn is_name_end(c: Int) -> Bool
     c == 32 or c == 9 or c == 61
 
 // The lines of a text, with their line ends removed.
+@tier(app)
 fn text_lines(text: Str) -> [Str]
     str.split(text, "\n")
 
@@ -592,7 +618,8 @@ fn text_lines(text: Str) -> [Str]
 //         Ok(m)  => println("${m.type_name} ${list.len(m.fields)}")
 //         Err(e) => println(e)
 // ```
-pub fn parse_msg(pkg: Str, name: Str, text: Str) -> Result<Message, Str>
+pub @tier(app)
+fn parse_msg(pkg: Str, name: Str, text: Str) -> Result<Message, Str>
     if not pkg_ok(pkg) or not name_ok(name, 3)
         return Err("`${pkg}/${name}` is not a message name")
     parse_body(pkg, "msg", name, struct_name(name), text_lines(text))
@@ -610,7 +637,8 @@ pub fn parse_msg(pkg: Str, name: Str, text: Str) -> Result<Message, Str>
 //         Ok(pair) => println("${pair[0].name} ${pair[1].name}")
 //         Err(e)   => println(e)
 // ```
-pub fn parse_srv(pkg: Str, name: Str, text: Str) -> Result<[Message], Str>
+pub @tier(app)
+fn parse_srv(pkg: Str, name: Str, text: Str) -> Result<[Message], Str>
     if not pkg_ok(pkg) or not name_ok(name, 3)
         return Err("`${pkg}/${name}` is not a service name")
     var request: [Str] = []
@@ -664,6 +692,7 @@ const RESERVED_20 = " TomlDoc Tty TuiDots Tz UartConsole Ui Unit Vec VecStore Vo
 const RESERVED_21 = " XmlDoc YamlDoc ZipReader Zoned regex "
 
 // Whether the language already has a type of this name.
+@tier(app)
 fn reserved_type(name: Str) -> Bool
     let key = " ${name} "
     str.contains(RESERVED_0, key)
@@ -701,7 +730,8 @@ fn reserved_type(name: Str) -> Bool
 //     println(msggen.struct_name("String"))   // StringMsg
 //     println(msggen.struct_name("Twist"))    // Twist
 // ```
-pub fn struct_name(ros: Str) -> Str
+pub @tier(app)
+fn struct_name(ros: Str) -> Str
     if reserved_type(ros)
         "${ros}Msg"
     else
@@ -717,7 +747,8 @@ pub fn struct_name(ros: Str) -> Str
 //     println(msggen.field_name("type"))   // type_
 //     println(msggen.field_name("x"))      // x
 // ```
-pub fn field_name(ros: Str) -> Str
+pub @tier(app)
+fn field_name(ros: Str) -> Str
     match ros
         "fn"               => "fn_"
         "let"              => "let_"
@@ -773,6 +804,7 @@ pub fn field_name(ros: Str) -> Str
 
 // A message name in capitals with an underscore at each lowercase-to-
 // uppercase step: `NavSatStatus` is `NAV_SAT_STATUS`.
+@tier(app)
 fn upper_snake(name: Str) -> Str
     var out = ""
     var prev = 0
@@ -793,6 +825,7 @@ fn upper_snake(name: Str) -> Str
 // capacities of the generated storage.
 
 // The type with its capacities decided.
+@tier(app)
 fn settle(t: TypeRef, opt: GenOptions) -> TypeRef
     var bound = t.bound
     var shape = t.shape
@@ -805,6 +838,7 @@ fn settle(t: TypeRef, opt: GenOptions) -> TypeRef
     TypeRef { prim: t.prim, pkg: t.pkg, name: t.name, bound: bound, shape: shape, count: count }
 
 // The Novo spelling of a message type, from a message of package `pkg`.
+@tier(app)
 fn nested_type(t: TypeRef, pkg: Str) -> Str
     if t.pkg == pkg
         struct_name(t.name)
@@ -812,6 +846,7 @@ fn nested_type(t: TypeRef, pkg: Str) -> Str
         "${t.pkg}.${struct_name(t.name)}"
 
 // The Novo type of one element of a field.
+@tier(app)
 fn elem_type(t: TypeRef, pkg: Str) -> Str
     if t.prim == ""
         nested_type(t, pkg)
@@ -821,6 +856,7 @@ fn elem_type(t: TypeRef, pkg: Str) -> Str
         prim_type(t.prim)
 
 // The Novo type of a whole field.
+@tier(app)
 fn field_type(t: TypeRef, pkg: Str) -> Str
     let e = elem_type(t, pkg)
     if t.shape == SHAPE_SCALAR
@@ -831,6 +867,7 @@ fn field_type(t: TypeRef, pkg: Str) -> Str
         "Vec[${e}; ${t.count}]"
 
 // The zero of a scalar primitive, as an expression of its own type.
+@tier(app)
 fn prim_zero(prim: Str) -> Str
     var plain = "0"
     if prim == "bool"
@@ -840,6 +877,7 @@ fn prim_zero(prim: Str) -> Str
     typed_literal(prim, plain)
 
 // The comment lines for something with this documentation, indented.
+@tier(app)
 fn comment_lines(indent: Str, doc: [Str]) -> [Str]
     var out: [Str] = []
     for d in doc
@@ -851,10 +889,12 @@ fn comment_lines(indent: Str, doc: [Str]) -> [Str]
     out
 
 // Whether a type is a primitive that is neither a string nor nested.
+@tier(app)
 fn is_scalar(t: TypeRef) -> Bool
     t.prim != "" and t.prim != "string"
 
 // The statement that writes one element, given the expression for it.
+@tier(app)
 fn put_elem(t: TypeRef, expr: Str) -> Str
     if t.prim == ""
         "${expr}.write_to(var w)"
@@ -864,6 +904,7 @@ fn put_elem(t: TypeRef, expr: Str) -> Str
         "w.put_${prim_op(t.prim)}(${expr})"
 
 // The lines that write a whole field.
+@tier(app)
 fn put_lines(t: TypeRef, fname: Str) -> [Str]
     let me = "self.${fname}"
     var out: [Str] = []
@@ -879,6 +920,7 @@ fn put_lines(t: TypeRef, fname: Str) -> [Str]
     out
 
 // The statement that reads one non-scalar element into the local `e`.
+@tier(app)
 fn read_into(t: TypeRef) -> Str
     if t.prim == "string"
         "get_str_${t.bound}(var r, var e)"
@@ -886,6 +928,7 @@ fn read_into(t: TypeRef) -> Str
         "e.read_from(var r)"
 
 // The lines that read a whole field.
+@tier(app)
 fn get_lines(t: TypeRef, fname: Str, pkg: Str) -> [Str]
     let me = "self.${fname}"
     var out: [Str] = []
@@ -917,6 +960,7 @@ fn get_lines(t: TypeRef, fname: Str, pkg: Str) -> [Str]
     out
 
 // The zero value of one element, as an expression.
+@tier(app)
 fn elem_zero(t: TypeRef, pkg: Str) -> Str
     if t.prim == ""
         "${nested_type(t, pkg)}.new()"
@@ -929,6 +973,7 @@ fn elem_zero(t: TypeRef, pkg: Str) -> Str
 // columns.  `start` is the column the literal begins at, and the rows
 // after the first are indented to the column of a field plus four,
 // which is the form `novo fmt` leaves alone.
+@tier(app)
 fn array_literal(items: [Str], start: Int) -> Str
     var out = "["
     var col = start + 1
@@ -951,6 +996,7 @@ fn array_literal(items: [Str], start: Int) -> Str
 // literal cannot spell inline, and the expression for the field.  A
 // string or a sequence with contents is a local that is filled first,
 // and a fixed array of strings needs one empty string bound to a name.
+@tier(app)
 fn init_field(f: Field, t: TypeRef, fname: Str, pkg: Str) -> (Str, [Str])
     var pre: [Str] = []
     let ty = field_type(t, pkg)
@@ -979,6 +1025,7 @@ fn init_field(f: Field, t: TypeRef, fname: Str, pkg: Str) -> (Str, [Str])
     ("Vec.new()", pre)
 
 // The helpers that move a string of `cap` bytes.
+@tier(app)
 fn string_helpers(cap: Int) -> [Str]
     [
         "// Write a string of at most ${cap} bytes: its length with the NUL counted, the bytes, the NUL.",
@@ -999,6 +1046,7 @@ fn string_helpers(cap: Int) -> [Str]
         ""]
 
 // The text of one message: its constants, its struct and its methods.
+@tier(app)
 fn message_text(m: Message, msgs: [Message], opt: GenOptions) -> [Str]
     var out: [Str] = []
     let prefix = upper_snake(m.ros_name)
@@ -1096,6 +1144,7 @@ fn message_text(m: Message, msgs: [Message], opt: GenOptions) -> [Str]
     out
 
 // The string capacities some field of some message uses, each once.
+@tier(app)
 fn string_caps(msgs: [Message], opt: GenOptions) -> [Int]
     var caps: [Int] = []
     for m in msgs
@@ -1106,6 +1155,7 @@ fn string_caps(msgs: [Message], opt: GenOptions) -> [Int]
     caps
 
 // The other packages the messages name, each once, in the order met.
+@tier(app)
 fn packages_used(msgs: [Message]) -> [Str]
     var pkgs: [Str] = []
     for m in msgs
@@ -1133,7 +1183,8 @@ fn packages_used(msgs: [Message]) -> [Str]
 //                 Err(e)   => println(e)
 //         Err(e) => println(e)
 // ```
-pub fn generate(pkg: Str, msgs: [Message], opt: GenOptions) -> Result<Str, Str>
+pub @tier(app)
+fn generate(pkg: Str, msgs: [Message], opt: GenOptions) -> Result<Str, Str>
     if not pkg_ok(pkg)
         return Err("`${pkg}` is not a package name")
     if opt.string_cap < 1 or opt.seq_cap < 1
@@ -1171,11 +1222,13 @@ pub fn generate(pkg: Str, msgs: [Message], opt: GenOptions) -> Result<Str, Str>
 
 // A small number that differs by field and by element, and fits every
 // integer type: 1 to 100.
+@tier(app)
 fn sample_number(k: Int, j: Int) -> Int
     (k + j) % 100 + 1
 
 // One element of a sample, as an expression.  `sname` is the local that
 // holds the sample string when the element is one.
+@tier(app)
 fn sample_elem(t: TypeRef, pkg: Str, k: Int, j: Int, sname: Str) -> Str
     if t.prim == ""
         "${nested_type(t, pkg)}.sample()"
@@ -1190,6 +1243,7 @@ fn sample_elem(t: TypeRef, pkg: Str, k: Int, j: Int, sname: Str) -> Str
 
 // The lines before the struct literal in `sample`, and the expression
 // for field number `k`.
+@tier(app)
 fn sample_field(t: TypeRef, fname: Str, k: Int, pkg: Str) -> (Str, [Str])
     var pre: [Str] = []
     let sname = "s_${fname}"
@@ -1214,6 +1268,7 @@ fn sample_field(t: TypeRef, fname: Str, k: Int, pkg: Str) -> (Str, [Str])
     (vname, pre)
 
 // The `sample` method of a message.
+@tier(app)
 fn sample_lines(m: Message, opt: GenOptions) -> [Str]
     var out: [Str] = []
     var pre: [Str] = []
@@ -1241,6 +1296,7 @@ fn sample_lines(m: Message, opt: GenOptions) -> [Str]
 
 // The test lines that call the hash methods a message has: each answers
 // `RIHS01_` and 64 digits, 71 characters.
+@tier(app)
 fn hash_checks(m: Message, msgs: [Message], opt: GenOptions, ty: Str) -> [Str]
     var out: [Str] = []
     let known = list.concat(msgs, opt.pool)
@@ -1259,7 +1315,8 @@ fn hash_checks(m: Message, msgs: [Message], opt: GenOptions, ty: Str) -> [Str]
 //
 // The module is a test file, so it sits in `tests/` and reaches the
 // generated module as `interfaces.<pkg>`.
-pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
+pub @tier(app)
+fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
     var out: [Str] = []
     list.push(out,
         "// gen_${pkg}_tests.nv — the round trip of every message of ${pkg}, generated by msggen.")
@@ -1342,6 +1399,7 @@ pub fn generate_tests(pkg: Str, msgs: [Message], opt: GenOptions) -> Str
 // `char` is the number of a `uint8`, as rosidl treats it.
 
 // The number of a type with no array around it: 1 for a nested message.
+@tier(app)
 fn base_type_id(t: TypeRef) -> Int
     if t.prim == ""
         return 1
@@ -1365,6 +1423,7 @@ fn base_type_id(t: TypeRef) -> Int
         _         => 16
 
 // What the array around a type adds to its number.
+@tier(app)
 fn shape_offset(shape: Int) -> Int
     if shape == SHAPE_FIXED
         return 48
@@ -1377,6 +1436,7 @@ fn shape_offset(shape: Int) -> Int
 // The full name of a nested message type: `pkg/msg/Name`, or `pkg/srv/Name`
 // for the half of a service, whose names have the underscore a message
 // name cannot have.
+@tier(app)
 fn full_name(t: TypeRef) -> Str
     if t.prim != ""
         return ""
@@ -1385,6 +1445,7 @@ fn full_name(t: TypeRef) -> Str
     "${t.pkg}/msg/${t.name}"
 
 // One field of a description, as the hash sees it.
+@tier(app)
 fn field_json(f: Field) -> Str
     let t = f.ty
     var capacity = 0
@@ -1397,6 +1458,7 @@ fn field_json(f: Field) -> Str
     "{\"name\": \"${f.name}\", \"type\": {\"type_id\": ${id}, \"capacity\": ${capacity}, \"string_capacity\": ${string_capacity}, \"nested_type_name\": \"${full_name(t)}\"}}"
 
 // The description of one type, without the types it contains.
+@tier(app)
 fn description_json(m: Message) -> Str
     var fields: [Str] = []
     for f in m.fields
@@ -1404,6 +1466,7 @@ fn description_json(m: Message) -> Str
     "{\"type_name\": \"${m.type_name}\", \"fields\": [${str.join(fields, ", ")}]}"
 
 // The full names of the message types a message's fields hold.
+@tier(app)
 fn nested_names(m: Message) -> [Str]
     var names: [Str] = []
     for f in m.fields
@@ -1413,6 +1476,7 @@ fn nested_names(m: Message) -> [Str]
     names
 
 // The message of that full name among `known`.
+@tier(app)
 fn find_type(name: Str, known: [Message]) -> [Message]
     var found: [Message] = []
     for k in known
@@ -1422,6 +1486,7 @@ fn find_type(name: Str, known: [Message]) -> [Message]
 
 // Every type a message contains, directly or through another, sorted by
 // name; or None if one of them is not among `known`.
+@tier(app)
 fn contained_types(m: Message, known: [Message]) -> ?[Message]
     var queue = nested_names(m)
     var seen: [Str] = []
@@ -1464,7 +1529,8 @@ fn contained_types(m: Message, known: [Message]) -> ?[Message]
 //     println(msggen.type_hash(m, [m]) ?? "none")
 //     // RIHS01_df668c740482bbd48fb39d76a70dfd4bd59db1288021743503259e948f6b1a18
 // ```
-pub fn type_hash(m: Message, known: [Message]) -> ?Str
+pub @tier(app)
+fn type_hash(m: Message, known: [Message]) -> ?Str
     let contained = contained_types(m, known) ?? []
     if list.len(contained) == 0 and list.len(nested_names(m)) > 0
         return None
@@ -1475,11 +1541,13 @@ pub fn type_hash(m: Message, known: [Message]) -> ?Str
     Some("RIHS01_${crypto.sha256(text)}")
 
 // A nested-message field of the given name and shape.
+@tier(app)
 fn nested_field(name: Str, pkg: Str, type_name: Str, shape: Int, count: Int) -> Field
     let t = TypeRef { prim: "", pkg: pkg, name: type_name, bound: -1, shape: shape, count: count }
     Field { ty: t, name: name, has_default: false, defaults: [], doc: [] }
 
 // A message of the given parts and no constants.
+@tier(app)
 fn plain_message(pkg: Str, ros_name: Str, kind: Str, fields: [Field]) -> Message
     Message { pkg: pkg, ros_name: ros_name, name: ros_name,
         type_name: "${pkg}/${kind}/${ros_name}", dds_name: "", fields: fields, consts: [], doc: [] }
@@ -1487,6 +1555,7 @@ fn plain_message(pkg: Str, ros_name: Str, kind: Str, fields: [Field]) -> Message
 // The service whose halves are `request` and `response`, and the event
 // message that goes with it, as messages of their own: ROS 2 hashes a
 // service as a message of three fields, each holding one of them.
+@tier(app)
 fn service_messages(request: Message, response: Message) -> [Message]
     let base = str.slice(request.ros_name, 0, str.len(request.ros_name) - 8)
     let pkg = request.pkg
@@ -1502,13 +1571,15 @@ fn service_messages(request: Message, response: Message) -> [Message]
 
 // The message of a service half among `msgs`: the other half of the one
 // given, found by name.
+@tier(app)
 fn other_half(m: Message, suffix: Str, msgs: [Message]) -> [Message]
     let base = str.slice(m.ros_name, 0, str.len(m.ros_name) - str.len(suffix))
     find_type("${m.pkg}/srv/${base}_${suffix}", msgs)
 
 // The type hash of the service a half belongs to, or None.  `msgs` are
 // the messages of the half's package, and `known` every type available.
-pub fn service_type_hash(m: Message, msgs: [Message], known: [Message]) -> ?Str
+pub @tier(app)
+fn service_type_hash(m: Message, msgs: [Message], known: [Message]) -> ?Str
     if not str.contains(m.type_name, "/srv/")
         return None
     var halves = [m]
@@ -1522,6 +1593,7 @@ pub fn service_type_hash(m: Message, msgs: [Message], known: [Message]) -> ?Str
     type_hash(synthetic[0], list.concat(known, list.concat(synthetic, halves)))
 
 // The name of the service a half belongs to: `pkg/srv/Name`.
+@tier(app)
 fn service_name_of(m: Message) -> Str
     var cut = 9
     if str.ends_with(m.ros_name, "_Request")
@@ -1530,6 +1602,7 @@ fn service_name_of(m: Message) -> Str
 
 // The text of the methods that give a message's hashes, or nothing when
 // a type it contains is not available.
+@tier(app)
 fn hash_lines(m: Message, msgs: [Message], opt: GenOptions) -> [Str]
     var out: [Str] = []
     let known = list.concat(msgs, opt.pool)
@@ -1582,7 +1655,8 @@ pub struct Job
 //         Ok(j)  => println("${j.pkg} ${list.len(j.files)}")
 //         Err(e) => println(e)
 // ```
-pub fn parse_args(args: [Str]) -> Result<Job, Str>
+pub @tier(app)
+fn parse_args(args: [Str]) -> Result<Job, Str>
     var pkg = ""
     var out = ""
     var tests_out = ""
@@ -1630,12 +1704,14 @@ pub fn parse_args(args: [Str]) -> Result<Job, Str>
     Ok(Job { pkg: pkg, out: out, opt: opt, files: files, tests_out: tests_out, include: include })
 
 // The last component of a path.
+@tier(app)
 fn base_of(p: Str) -> Str
     let parts = str.split(p, "/")
     parts[list.len(parts) - 1]
 
 // The indices of `files` in the byte order of their last components, so
 // that the module does not depend on the order a shell listed them in.
+@tier(app)
 fn sorted_order(files: [Str]) -> [Int]
     var order: [Int] = []
     var taken: [Bool] = []
@@ -1656,6 +1732,7 @@ fn sorted_order(files: [Str]) -> [Int]
 //
 // The message name is the file's name without its extension, and the
 // extension says which parser reads it.
+@tier(app)
 fn read_messages(job: Job, texts: [Str]) -> Result<([Message], [Str]), Str>
     if list.len(texts) != list.len(job.files)
         return Err("a text for every file")
@@ -1685,6 +1762,7 @@ fn read_messages(job: Job, texts: [Str]) -> Result<([Message], [Str]), Str>
 // The definition of a message of another package, read from the include
 // directory: the one message, or none if the file is not there or does not
 // parse.
+@tier(app)
 fn read_dependency(include: Str, pkg: Str, name: Str) -> [Message] [fs]
     var found: [Message] = []
     match fs.read("${include}/${pkg}/msg/${name}.msg")
@@ -1699,6 +1777,7 @@ fn read_dependency(include: Str, pkg: Str, name: Str) -> [Message] [fs]
 // The messages of other packages that `msgs` contain, directly or
 // through each other, read from the include directory.  A service needs
 // `service_msgs/msg/ServiceEventInfo` as well, for its event message.
+@tier(app)
 fn load_pool(include: Str, msgs: [Message]) -> [Message] [fs]
     var pool: [Message] = []
     if include == ""
@@ -1727,6 +1806,7 @@ struct Prepared
     opt: GenOptions
 
 // Read the definitions of a job and the types they contain.
+@tier(app)
 fn prepare(job: Job, texts: [Str]) -> Result<Prepared, Str> [fs]
     let read = read_messages(job, texts)!
     let pool = load_pool(job.include, read.0)
@@ -1736,16 +1816,19 @@ fn prepare(job: Job, texts: [Str]) -> Result<Prepared, Str> [fs]
 
 // Build the module a job asks for, given the text of each of its files
 // in the order the job lists them.
-pub fn build_module(job: Job, texts: [Str]) -> Result<Str, Str> [fs]
+pub @tier(app)
+fn build_module(job: Job, texts: [Str]) -> Result<Str, Str> [fs]
     let p = prepare(job, texts)!
     generate(job.pkg, p.msgs, p.opt)
 
 // Build the test module that goes with it.
-pub fn build_tests(job: Job, texts: [Str]) -> Result<Str, Str> [fs]
+pub @tier(app)
+fn build_tests(job: Job, texts: [Str]) -> Result<Str, Str> [fs]
     let p = prepare(job, texts)!
     Ok(generate_tests(job.pkg, p.msgs, p.opt))
 
 // Print a failure and answer the exit status for it.
+@tier(app)
 fn report(why: Str) -> Int [io]
     println("msggen: ${why}")
     1
@@ -1761,7 +1844,8 @@ fn report(why: Str) -> Int [io]
 //     let status = msggen.run(["--package", "p", "--out", "p.nv"])
 //     println("${status}")   // 1: no definition files
 // ```
-pub fn run(args: [Str]) -> Int [io, fs]
+pub @tier(app)
+fn run(args: [Str]) -> Int [io, fs]
     let job = match parse_args(args)
         Err(e) =>
             return report(e)
